@@ -377,8 +377,8 @@ public class MoxDashboard extends JFrame
                y          = Integer.parseInt(j[1]);
             }
             Dimension dim  = Toolkit.getDefaultToolkit().getScreenSize();
-            int       offx = new Random().nextInt((int)((float)dim.width * 0.5f));
-            int       offy = new Random().nextInt((int)((float)dim.height * 0.5f));
+            int       offx = new Random().nextInt((int)((float)dim.width * 0.1f));
+            int       offy = new Random().nextInt((int)((float)dim.height * 0.1f));
             for (int x2 = 0, d = mox.morphognostic.neighborhoods.get(n).sectors.length; x2 < d; x2++)
             {
                for (int y2 = 0; y2 < d; y2++)

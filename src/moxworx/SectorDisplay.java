@@ -24,8 +24,8 @@ public class SectorDisplay extends JFrame implements Runnable
 
    // Display.
    static final int       DISPLAY_UPDATE_DELAY_MS = 50;
-   static final Dimension displaySize             = new Dimension(400, 300);
-   static final Dimension canvasSize = new Dimension(400, 275);
+   static final Dimension displaySize             = new Dimension(275, 200);
+   static final Dimension canvasSize = new Dimension(275, 175);
    Canvas                 canvas;
    Graphics               canvasGraphics;
    Image     image;
