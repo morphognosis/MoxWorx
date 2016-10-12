@@ -7,11 +7,14 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.Random;
 
 import javax.swing.*;
 
 public class SectorDisplay extends JFrame implements Runnable
 {
+   private static final long serialVersionUID = 0L;
+
    // Targets.
    MoxDashboard.MorphognosticPanel dashboard;
    Mox           mox;
@@ -142,16 +145,30 @@ public class SectorDisplay extends JFrame implements Runnable
    // Update display.
    public void updateDisplay()
    {
-      imageGraphics.setColor(Color.white);
+      imageGraphics.setColor(Color.gray);
       imageGraphics.fillRect(0, 0, imageSize.width, imageSize.height);
+      Random random = new Random();
 
       if (displayMode == DISPLAY_MODE.DENSITIES)
       {
-         int n = Morphognostic.NUM_LANDMARK_TYPES;
+         // Draw type density histogram.
+         int n = morphognostic.numLandmarkTypes;
          int w = imageSize.width / n;
-         imageGraphics.setColor(Color.gray);
          for (int i = 0, x = 0; i < n; i++, x += w)
          {
+            if (i == MoxCells.EMPTY_CELL_VALUE)
+            {
+               imageGraphics.setColor(MoxCells.EMPTY_CELL_COLOR);
+            }
+            else
+            {
+               random.setSeed(i + MoxCells.OBSTACLE_CELLS_BEGIN_VALUE - 1);
+               float r     = random.nextFloat();
+               float g     = random.nextFloat();
+               float b     = random.nextFloat();
+               Color color = new Color(r, g, b);
+               imageGraphics.setColor(color);
+            }
             float h = (float)imageSize.height * sector.getTypeDensity(i);
             imageGraphics.fillRect(x, (int)(imageSize.height - h), w + 1, (int)h);
          }
@@ -166,7 +183,6 @@ public class SectorDisplay extends JFrame implements Runnable
          // Draw landmarks.
          float cellWidth  = (float)imageSize.width / (float)sector.landmarks.length;
          float cellHeight = (float)imageSize.height / (float)sector.landmarks.length;
-
          for (int x = 0, x2 = 0; x < sector.landmarks.length;
               x++, x2 = (int)(cellWidth * (double)x))
          {
@@ -176,20 +192,25 @@ public class SectorDisplay extends JFrame implements Runnable
             {
                switch (sector.landmarks[x][y])
                {
+               case -1:
+                  imageGraphics.setColor(Color.gray);
+                  imageGraphics.fillRect(x2, y2, (int)cellWidth + 1,
+                                         (int)cellHeight + 1);
+                  break;
+
                case MoxCells.EMPTY_CELL_VALUE:
                   imageGraphics.setColor(MoxCells.EMPTY_CELL_COLOR);
                   imageGraphics.fillRect(x2, y2, (int)cellWidth + 1,
                                          (int)cellHeight + 1);
                   break;
 
-               case MoxCells.OBSTACLE_CELL_VALUE:
-                  imageGraphics.setColor(MoxCells.OBSTACLE_CELL_COLOR);
-                  imageGraphics.fillRect(x2, y2, (int)cellWidth + 1,
-                                         (int)cellHeight + 1);
-                  break;
-
-               case -1:
-                  imageGraphics.setColor(Color.gray);
+               default:
+                  random.setSeed(sector.landmarks[x][y]);
+                  float r     = random.nextFloat();
+                  float g     = random.nextFloat();
+                  float b     = random.nextFloat();
+                  Color color = new Color(r, g, b);
+                  imageGraphics.setColor(color);
                   imageGraphics.fillRect(x2, y2, (int)cellWidth + 1,
                                          (int)cellHeight + 1);
                   break;

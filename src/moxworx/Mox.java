@@ -17,6 +17,7 @@ public class Mox
    public int      x, y;
    public int      direction;
    public MoxCells moxCells;
+   public int      numLandmarkTypes;
    public int      x2, y2;
    public int      direction2;
    public int      driverType;
@@ -60,8 +61,8 @@ public class Mox
    public static final int EAT     = 4;
 
    // Navigation.
-   public boolean[][]      obstacleMap;
-   public static final int MAX_LANDMARK_EVENT_AGE = 10;
+   public boolean[][] obstacleMap;
+   public int         maxLandmarkEventAge;
    public class LandmarkEvent
    {
       public int value;
@@ -100,18 +101,20 @@ public class Mox
    }
 
    // Constructors.
-   public Mox(int id, int x, int y, int direction, MoxCells moxCells)
+   public Mox(int id, int x, int y, int direction, int numLandmarkTypes, MoxCells moxCells)
    {
-      this.id       = id;
-      this.moxCells = moxCells;
+      this.id               = id;
+      this.moxCells         = moxCells;
+      this.numLandmarkTypes = numLandmarkTypes;
       init(x, y, direction);
    }
 
 
    public Mox(MoxCells moxCells)
    {
-      id            = -1;
-      this.moxCells = moxCells;
+      id               = -1;
+      this.moxCells    = moxCells;
+      numLandmarkTypes = 1;
       init();
    }
 
@@ -139,9 +142,11 @@ public class Mox
          }
       }
       landmarkEvents = new Vector<LandmarkEvent>();
-      morphognostic  = new Morphognostic(Orientation.NORTH);
+      morphognostic  = new Morphognostic(direction, numLandmarkTypes);
       metamorphs     = new ArrayList<Metamorph>();
-      eventTime      = 0;
+      Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(Morphognostic.NUM_NEIGHBORHOODS - 1);
+      maxLandmarkEventAge = n.epoch + n.duration - 1;
+      eventTime           = 0;
    }
 
 
@@ -154,16 +159,25 @@ public class Mox
    // Reset state.
    void reset()
    {
-      x              = x2;
-      y              = y2;
-      direction      = direction2;
-      driverType     = DRIVER_TYPE.MOX.getValue();
-      driverResponse = WAIT;
+      x         = x2;
+      y         = y2;
+      direction = direction2;
       for (int i = 0; i < SENSOR_CONFIG.NUM_SENSORS.getValue(); i++)
       {
          sensors[i] = 0.0f;
       }
-      response = WAIT;
+      response       = WAIT;
+      driverType     = DRIVER_TYPE.MOX.getValue();
+      driverResponse = WAIT;
+      for (int i = 0; i < moxCells.size.width; i++)
+      {
+         for (int j = 0; j < moxCells.size.height; j++)
+         {
+            obstacleMap[i][j] = false;
+         }
+      }
+      landmarkEvents.clear();
+      morphognostic.clear();
    }
 
 
@@ -272,7 +286,7 @@ public class Mox
    {
       // Save event.
       landmarkEvents.add(new LandmarkEvent(moxCells.cells[fx][fy], fx, fy, eventTime));
-      if ((eventTime - landmarkEvents.get(0).time) > MAX_LANDMARK_EVENT_AGE)
+      if ((eventTime - landmarkEvents.get(0).time) > maxLandmarkEventAge)
       {
          landmarkEvents.remove(0);
       }
@@ -296,7 +310,7 @@ public class Mox
       // Update morphognostic.
       int w = moxCells.size.width;
       int h = moxCells.size.height;
-      int a = MAX_LANDMARK_EVENT_AGE + 1;
+      int a = maxLandmarkEventAge + 1;
       int landmarks[][][] = new int[w][h][a];
       for (int x = 0; x < w; x++)
       {
@@ -310,9 +324,9 @@ public class Mox
       }
       for (LandmarkEvent e : landmarkEvents)
       {
-         if (e.value == MoxCells.OBSTACLE_CELL_VALUE)
+         if (e.value >= MoxCells.OBSTACLE_CELLS_BEGIN_VALUE)
          {
-            landmarks[e.x][e.y][eventTime - e.time] = MoxCells.OBSTACLE_CELL_VALUE;
+            landmarks[e.x][e.y][eventTime - e.time] = e.value;
          }
          else
          {

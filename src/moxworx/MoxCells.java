@@ -5,23 +5,21 @@
 package moxworx;
 
 import java.io.*;
-import java.util.*;
 import java.awt.*;
 
 // Mox cells.
 public class MoxCells
 {
    // Cell values.
-   public static final int EMPTY_CELL_VALUE    = 0;
-   public static final int OBSTACLE_CELL_VALUE = 1;
-   public static final int FOOD_CELL_VALUE     = 2;
-   public static final int MOX_CELL_VALUE      = 3;
+   public static final int EMPTY_CELL_VALUE           = 0;
+   public static final int FOOD_CELL_VALUE            = 1;
+   public static final int MOX_CELL_VALUE             = 2;
+   public static final int OBSTACLE_CELLS_BEGIN_VALUE = 3;
 
    // Color.
-   public static final Color EMPTY_CELL_COLOR    = Color.WHITE;
-   public static final Color OBSTACLE_CELL_COLOR = Color.RED;
-   public static final Color FOOD_CELL_COLOR     = Color.GREEN;
-   public static final Color MOX_CELL_COLOR      = Color.BLUE;
+   public static final Color EMPTY_CELL_COLOR = Color.WHITE;
+   public static final Color FOOD_CELL_COLOR  = Color.GREEN;
+   public static final Color MOX_CELL_COLOR   = Color.BLUE;
 
    // Cells.
    public Dimension size;

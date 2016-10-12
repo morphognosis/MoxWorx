@@ -13,6 +13,8 @@ import javax.swing.*;
 // Mox dashboard.
 public class MoxDashboard extends JFrame
 {
+   private static final long serialVersionUID = 0L;
+
    // Components.
    SensorsResponsePanel sensorsResponse;
    DriverPanel          driver;
@@ -130,6 +132,8 @@ public class MoxDashboard extends JFrame
    // Sensors/Response panel.
    class SensorsResponsePanel extends JPanel
    {
+      private static final long serialVersionUID = 0L;
+
       // Components.
       JTextField landmarkText;
       JTextField foodText;
@@ -186,6 +190,8 @@ public class MoxDashboard extends JFrame
    // Driver panel.
    class DriverPanel extends JPanel implements ItemListener, ActionListener
    {
+      private static final long serialVersionUID = 0L;
+
       // Components.
       Choice  driverChoice;
       JButton turnLeftButton;
@@ -266,6 +272,8 @@ public class MoxDashboard extends JFrame
    // Morphognostic panel.
    public class MorphognosticPanel extends JPanel implements ItemListener, ActionListener
    {
+      private static final long serialVersionUID = 0L;
+
       // Components.
       Choice                neighborhoodChoice;
       Choice                sectorChoice;

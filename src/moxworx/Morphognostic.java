@@ -3,7 +3,6 @@
 package moxworx;
 
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -29,7 +28,6 @@ public class Morphognostic
    public static int NEIGHBORHOOD_DIMENSION_MULTIPLIER = 3;
    public static int EPOCH_INTERVAL_STRIDE             = 1;
    public static int EPOCH_INTERVAL_MULTIPLIER         = 3;
-   public static int NUM_LANDMARK_TYPES = 2;
 
    // Neighborhood.
    public class Neighborhood
@@ -49,7 +47,7 @@ public class Morphognostic
             this.dx        = dx;
             this.dy        = dy;
             this.dimension = dimension;
-            typeDensities  = new float[NUM_LANDMARK_TYPES];
+            typeDensities  = new float[numLandmarkTypes];
             landmarks      = new int[dimension][dimension];
             for (int x = 0; x < dimension; x++)
             {
@@ -114,7 +112,7 @@ public class Morphognostic
             for (int sy1 = 0, sy2 = sectors.length; sy1 < sy2; sy1++)
             {
                Sector s = sectors[sx1][sy1];
-               for (int i = 0; i < NUM_LANDMARK_TYPES; i++)
+               for (int i = 0; i < numLandmarkTypes; i++)
                {
                   s.typeDensities[i] = 0.0f;
                }
@@ -158,7 +156,13 @@ public class Morphognostic
                                (y3 >= s.dy) &&
                                (y3 < (s.dy + s.dimension)))
                            {
-                              s.typeDensities[t] += 1.0f;
+                              int i = t;
+                              if (i >= MoxCells.OBSTACLE_CELLS_BEGIN_VALUE)
+                              {
+                                 i -= MoxCells.OBSTACLE_CELLS_BEGIN_VALUE;
+                                 i++;
+                              }
+                              s.typeDensities[i] += 1.0f;
                               s.landmarks[x3 - s.dx][y3 - s.dy] = t;
                            }
                         }
@@ -174,9 +178,9 @@ public class Morphognostic
             for (int sy1 = 0, sy2 = sectors.length; sy1 < sy2; sy1++)
             {
                Sector s = sectors[sx1][sy1];
-               for (int i = 0; i < NUM_LANDMARK_TYPES; i++)
+               for (int i = 0; i < numLandmarkTypes; i++)
                {
-                  s.typeDensities[i] /= (float)sx2;
+                  s.typeDensities[i] /= (float)sectors[sx1][sy1].dimension;
                }
             }
          }
@@ -192,7 +196,7 @@ public class Morphognostic
          float[][] densities2 = n.rectifySectorTypeDensities();
          for (int i = 0, j = sectors.length * sectors.length; i < j; i++)
          {
-            for (int k = 0; k < NUM_LANDMARK_TYPES; k++)
+            for (int k = 0; k < numLandmarkTypes; k++)
             {
                d += Math.abs(densities1[i][k] - densities2[i][k]);
             }
@@ -204,7 +208,7 @@ public class Morphognostic
       // Rectify sector densities.
       public float[][] rectifySectorTypeDensities()
       {
-         float[][] densities = new float[sectors.length * sectors.length][NUM_LANDMARK_TYPES];
+         float[][] densities = new float[sectors.length * sectors.length][numLandmarkTypes];
          switch (orientation)
          {
          case Orientation.NORTH:
@@ -212,7 +216,7 @@ public class Morphognostic
             {
                for (int sx1 = 0, sx2 = sectors.length; sx1 < sx2; sx1++)
                {
-                  for (int j = 0; j < NUM_LANDMARK_TYPES; j++)
+                  for (int j = 0; j < numLandmarkTypes; j++)
                   {
                      densities[i][j] = sectors[sx1][sy1].typeDensities[j];
                   }
@@ -226,7 +230,7 @@ public class Morphognostic
             {
                for (int sx1 = sectors.length - 1; sx1 >= 0; sx1--)
                {
-                  for (int j = 0; j < NUM_LANDMARK_TYPES; j++)
+                  for (int j = 0; j < numLandmarkTypes; j++)
                   {
                      densities[i][j] = sectors[sx1][sy1].typeDensities[j];
                   }
@@ -240,7 +244,7 @@ public class Morphognostic
             {
                for (int sy1 = 0, sy2 = sectors.length; sy1 < sy2; sy1++)
                {
-                  for (int j = 0; j < NUM_LANDMARK_TYPES; j++)
+                  for (int j = 0; j < numLandmarkTypes; j++)
                   {
                      densities[i][j] = sectors[sx1][sy1].typeDensities[j];
                   }
@@ -254,7 +258,7 @@ public class Morphognostic
             {
                for (int sy1 = sectors.length - 1; sy1 >= 0; sy1--)
                {
-                  for (int j = 0; j < NUM_LANDMARK_TYPES; j++)
+                  for (int j = 0; j < numLandmarkTypes; j++)
                   {
                      densities[i][j] = sectors[sx1][sy1].typeDensities[j];
                   }
@@ -276,10 +280,14 @@ public class Morphognostic
    // Orientation.
    public int orientation;
 
+   // Number of landmark types.
+   public int numLandmarkTypes;
+
    // Constructors.
-   public Morphognostic(int orientation)
+   public Morphognostic(int orientation, int numLandmarkTypes)
    {
-      this.orientation = orientation;
+      this.orientation      = orientation;
+      this.numLandmarkTypes = numLandmarkTypes;
 
       // Create neighborhoods.
       neighborhoods = new Vector<Neighborhood>();
@@ -323,11 +331,9 @@ public class Morphognostic
    }
 
 
-   // Save.
-   public void save(FileOutputStream output) throws IOException
+   // Clear.
+   public void clear()
    {
-      PrintWriter writer = new PrintWriter(new OutputStreamWriter(output));
-
       for (Neighborhood n : neighborhoods)
       {
          for (int x = 0; x < n.sectors.length; x++)
@@ -335,7 +341,38 @@ public class Morphognostic
             for (int y = 0; y < n.sectors.length; y++)
             {
                Neighborhood.Sector s = n.sectors[x][y];
-               for (int i = 0; i < NUM_LANDMARK_TYPES; i++)
+               for (int i = 0; i < numLandmarkTypes; i++)
+               {
+                  s.typeDensities[i] = 0.0f;
+               }
+               for (int x2 = 0; x2 < s.landmarks.length; x2++)
+               {
+                  for (int y2 = 0; y2 < s.landmarks.length; y2++)
+                  {
+                     s.landmarks[x2][y2] = -1;
+                  }
+               }
+            }
+         }
+      }
+   }
+
+
+   // Save.
+   public void save(FileOutputStream output) throws IOException
+   {
+      PrintWriter writer = new PrintWriter(new OutputStreamWriter(output));
+
+      Utility.saveInt(writer, orientation);
+      Utility.saveInt(writer, numLandmarkTypes);
+      for (Neighborhood n : neighborhoods)
+      {
+         for (int x = 0; x < n.sectors.length; x++)
+         {
+            for (int y = 0; y < n.sectors.length; y++)
+            {
+               Neighborhood.Sector s = n.sectors[x][y];
+               for (int i = 0; i < numLandmarkTypes; i++)
                {
                   Utility.saveFloat(writer, s.typeDensities[i]);
                }
@@ -349,7 +386,6 @@ public class Morphognostic
             }
          }
       }
-      Utility.saveInt(writer, orientation);
       writer.flush();
    }
 
@@ -357,8 +393,10 @@ public class Morphognostic
    // Load.
    public static Morphognostic load(FileInputStream input) throws EOFException, IOException
    {
-      DataInputStream reader = new DataInputStream(input);
-      Morphognostic   m      = new Morphognostic(Orientation.NORTH);
+      DataInputStream reader           = new DataInputStream(input);
+      int             orientation      = Utility.loadInt(reader);
+      int             numLandmarkTypes = Utility.loadInt(reader);
+      Morphognostic   m = new Morphognostic(orientation, numLandmarkTypes);
 
       for (Neighborhood n : m.neighborhoods)
       {
@@ -367,7 +405,7 @@ public class Morphognostic
             for (int y = 0; y < n.sectors.length; y++)
             {
                Neighborhood.Sector s = n.sectors[x][y];
-               for (int i = 0; i < NUM_LANDMARK_TYPES; i++)
+               for (int i = 0; i < numLandmarkTypes; i++)
                {
                   s.typeDensities[i] = Utility.loadFloat(reader);
                }
@@ -381,7 +419,6 @@ public class Morphognostic
             }
          }
       }
-      m.orientation = Utility.loadInt(reader);
       return(m);
    }
 
@@ -389,7 +426,7 @@ public class Morphognostic
    // Clone.
    public Morphognostic clone()
    {
-      Morphognostic m = new Morphognostic(orientation);
+      Morphognostic m = new Morphognostic(orientation, numLandmarkTypes);
 
       for (int i = 0; i < NUM_NEIGHBORHOODS; i++)
       {
@@ -401,7 +438,7 @@ public class Morphognostic
             {
                Neighborhood.Sector s1 = n1.sectors[x][y];
                Neighborhood.Sector s2 = n2.sectors[x][y];
-               for (int j = 0; j < NUM_LANDMARK_TYPES; j++)
+               for (int j = 0; j < numLandmarkTypes; j++)
                {
                   s1.typeDensities[j] = s2.typeDensities[j];
                }
@@ -422,5 +459,37 @@ public class Morphognostic
    // Print.
    public void print()
    {
+      System.out.println("orientation=" + orientation);
+      System.out.println("numLandmarkTypes=" + numLandmarkTypes);
+      for (int i = 0; i < neighborhoods.size(); i++)
+      {
+         Neighborhood n = neighborhoods.get(i);
+         System.out.println("neighborhood=" + i);
+         for (int x = 0; x < n.sectors.length; x++)
+         {
+            for (int y = 0; y < n.sectors.length; y++)
+            {
+               System.out.println("\tsector[" + x + "][" + y + "]:");
+               System.out.print("\t\tdensities:");
+               Neighborhood.Sector s = n.sectors[x][y];
+               for (int j = 0; j < numLandmarkTypes; j++)
+               {
+                  System.out.print(" " + s.typeDensities[j]);
+               }
+               System.out.println("");
+               System.out.println("\t\tlandmarks:");
+               for (int x2 = 0; x2 < s.landmarks.length; x2++)
+               {
+                  System.out.print("\t\t\t");
+                  for (int y2 = 0; y2 < s.landmarks.length; y2++)
+                  {
+                     if (s.landmarks[x2][y2] >= 0) { System.out.print(" "); }
+                     System.out.print(s.landmarks[x2][y2] + " ");
+                  }
+                  System.out.println("");
+               }
+            }
+         }
+      }
    }
 }

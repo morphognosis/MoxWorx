@@ -14,6 +14,8 @@ import javax.swing.event.*;
 // Mox dashboard.
 public class MoxWorxDashboard extends JFrame
 {
+   private static final long serialVersionUID = 0L;
+
    // Moxen.
    ArrayList<Mox> moxen;
 
@@ -23,6 +25,9 @@ public class MoxWorxDashboard extends JFrame
 
    // Mox cells.
    MoxCells moxCells;
+
+   // Number of obstacle types.
+   int numObstacleTypes;
 
    // Title.
    static final String TITLE = "MoxWorx";
@@ -45,19 +50,21 @@ public class MoxWorxDashboard extends JFrame
    boolean quit;
 
    // Constructors.
-   public MoxWorxDashboard(MoxCells moxCells, ArrayList<Mox> moxen)
+   public MoxWorxDashboard(MoxCells moxCells, int numObstacleTypes, ArrayList<Mox> moxen)
    {
-      this.moxCells = moxCells;
+      this.moxCells         = moxCells;
+      this.numObstacleTypes = numObstacleTypes;
       setMoxen(moxen);
       currentMox = -1;
       init();
    }
 
 
-   public MoxWorxDashboard(MoxCells moxCells)
+   public MoxWorxDashboard(MoxCells moxCells, int numObstacleTypes)
    {
-      this.moxCells = moxCells;
-      moxen         = new ArrayList<Mox>();
+      this.moxCells         = moxCells;
+      this.numObstacleTypes = numObstacleTypes;
+      moxen = new ArrayList<Mox>();
       setMoxen(moxen);
       currentMox = -1;
       init();
@@ -225,6 +232,8 @@ public class MoxWorxDashboard extends JFrame
    // Mox display.
    public class MoxDisplay extends Canvas
    {
+      private static final long serialVersionUID = 0L;
+
       // Buffered display.
       private Dimension canvasSize;
       private Graphics  graphics;
@@ -283,6 +292,7 @@ public class MoxWorxDashboard extends JFrame
          cellHeight = (float)canvasSize.height / (float)moxCells.size.height;
 
          // Draw cells.
+         Random random = new Random();
          for (x = x2 = 0; x < moxCells.size.width;
               x++, x2 = (int)(cellWidth * (double)x))
          {
@@ -298,14 +308,22 @@ public class MoxWorxDashboard extends JFrame
                                          (int)cellHeight + 1);
                   break;
 
-               case MoxCells.OBSTACLE_CELL_VALUE:
-                  imageGraphics.setColor(MoxCells.OBSTACLE_CELL_COLOR);
-                  imageGraphics.fillRect(x2, y2, (int)cellWidth + 1,
-                                         (int)cellHeight + 1);
+               case MoxCells.FOOD_CELL_VALUE:
+                  imageGraphics.setColor(Color.white);
+                  imageGraphics.fillRect(x2 + 1, y2 + 1, (int)cellWidth - 1,
+                                         (int)cellHeight - 1);
+                  imageGraphics.setColor(MoxCells.FOOD_CELL_COLOR);
+                  imageGraphics.fillOval(x2, y2, (int)cellWidth,
+                                         (int)cellHeight);
                   break;
 
-               case MoxCells.FOOD_CELL_VALUE:
-                  imageGraphics.setColor(MoxCells.FOOD_CELL_COLOR);
+               default:
+                  random.setSeed(moxCells.cells[x][y]);
+                  float r     = random.nextFloat();
+                  float g     = random.nextFloat();
+                  float b     = random.nextFloat();
+                  Color color = new Color(r, g, b);
+                  imageGraphics.setColor(color);
                   imageGraphics.fillRect(x2, y2, (int)cellWidth + 1,
                                          (int)cellHeight + 1);
                   break;
@@ -461,24 +479,15 @@ public class MoxWorxDashboard extends JFrame
 
                if (!moxSelected)
                {
-                  switch (moxCells.cells[x][y])
+                  int n = MoxCells.OBSTACLE_CELLS_BEGIN_VALUE + numObstacleTypes;
+                  moxCells.cells[x][y] = (moxCells.cells[x][y] + 1) % n;
+                  if (moxCells.cells[x][y] == MoxCells.EMPTY_CELL_VALUE)
                   {
-                  case MoxCells.EMPTY_CELL_VALUE:
-                     moxCells.cells[x][y] = MoxCells.OBSTACLE_CELL_VALUE;
-                     break;
-
-                  case MoxCells.OBSTACLE_CELL_VALUE:
-                     moxCells.cells[x][y] = MoxCells.FOOD_CELL_VALUE;
                      for (i = 0; i < moxen.size(); i++)
                      {
                         mox = moxen.get(i);
                         mox.obstacleMap[x][y] = false;
                      }
-                     break;
-
-                  case MoxCells.FOOD_CELL_VALUE:
-                     moxCells.cells[x][y] = MoxCells.EMPTY_CELL_VALUE;
-                     break;
                   }
                }
 
@@ -498,6 +507,7 @@ public class MoxWorxDashboard extends JFrame
             int    y;
             double cellWidth  = (double)canvasSize.width / (double)moxCells.size.width;
             double cellHeight = (double)canvasSize.height / (double)moxCells.size.height;
+            int    n          = MoxCells.OBSTACLE_CELLS_BEGIN_VALUE + numObstacleTypes;
 
             x = (int)((double)evt.getX() / cellWidth);
             y = moxCells.size.height - (int)((double)evt.getY() / cellHeight) - 1;
@@ -509,21 +519,7 @@ public class MoxWorxDashboard extends JFrame
                {
                   lastX = x;
                   lastY = y;
-
-                  switch (moxCells.cells[x][y])
-                  {
-                  case MoxCells.EMPTY_CELL_VALUE:
-                     moxCells.cells[x][y] = MoxCells.OBSTACLE_CELL_VALUE;
-                     break;
-
-                  case MoxCells.OBSTACLE_CELL_VALUE:
-                     moxCells.cells[x][y] = MoxCells.FOOD_CELL_VALUE;
-                     break;
-
-                  case MoxCells.FOOD_CELL_VALUE:
-                     moxCells.cells[x][y] = MoxCells.EMPTY_CELL_VALUE;
-                     break;
-                  }
+                  moxCells.cells[x][y] = (moxCells.cells[x][y] + 1) % n;
 
                   // Refresh display.
                   update();
@@ -536,6 +532,8 @@ public class MoxWorxDashboard extends JFrame
    // Control panel.
    class MoxControls extends JPanel implements ActionListener, ChangeListener
    {
+      private static final long serialVersionUID = 0L;
+
       // Components.
       JButton    resetButton;
       JLabel     stepCounter;

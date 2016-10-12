@@ -42,9 +42,10 @@ public class MoxWorx
       "    java MoxWorx\n" +
       "      -steps <steps>\n" +
       "      -dimensions <width> <height>\n" +
-      "     [-numMoxen <quantity>]\n" +
-      "     [-numObstacles <quantity>]\n" +
-      "     [-numFoods <quantity>]\n" +
+      "     [-numMoxen <quantity> (default=0)]\n" +
+      "     [-numObstacleTypes <quantity> (default=1)]\n" +
+      "     [-numObstacles <quantity> (default=0)]\n" +
+      "     [-numFoods <quantity> (default=0)]\n" +
       "     [-numNeighborhoods <quantity> (default=" + Morphognostic.NUM_NEIGHBORHOODS + ")]\n" +
       "     [-neighborhoodInitialDimension <quantity> (default=" + Morphognostic.NEIGHBORHOOD_INITIAL_DIMENSION + ")]\n" +
       "     [-neighborhoodDimensionStride <quantity> (default=" + Morphognostic.NEIGHBORHOOD_DIMENSION_STRIDE + ")]\n" +
@@ -65,6 +66,9 @@ public class MoxWorx
    // Default random seed.
    public static final int DEFAULT_RANDOM_SEED = 4517;
 
+   // Number of obstacle types.
+   int numObstacleTypes;
+
    // Moxen.
    ArrayList<Mox> moxen;
 
@@ -84,9 +88,11 @@ public class MoxWorx
 
 
    // Initialize cells.
-   public void initCells(int width, int height, int numObstacles, int numFoods)
+   public void initCells(int width, int height, int numObstacleTypes, int numObstacles, int numFoods)
    {
       int i, j, n, x, y;
+
+      this.numObstacleTypes = numObstacleTypes;
 
       // Create cells.
       moxCells = new MoxCells(new Dimension(width, height));
@@ -108,7 +114,12 @@ public class MoxWorx
             y = random.nextInt(height);
             if (moxCells.cells[x][y] == MoxCells.EMPTY_CELL_VALUE)
             {
-               moxCells.cells[x][y] = MoxCells.OBSTACLE_CELL_VALUE;
+               int k = 0;
+               if (numObstacleTypes > 1)
+               {
+                  k = random.nextInt(numObstacleTypes);
+               }
+               moxCells.cells[x][y] = MoxCells.OBSTACLE_CELLS_BEGIN_VALUE + k;
                break;
             }
          }
@@ -175,7 +186,7 @@ public class MoxWorx
 
 
    // Create moxen.
-   public void createMoxen(int numMoxen)
+   public void createMoxen(int numMoxen, int numLandmarkTypes)
    {
       int i, j, n, x, y, w, h;
 
@@ -194,7 +205,7 @@ public class MoxWorx
             {
                int o = Orientation.NORTH;
                o = random.nextInt(Orientation.NUM_ORIENTATIONS);
-               moxen.add(i, new Mox(i, x, y, o, moxCells));
+               moxen.add(i, new Mox(i, x, y, o, numLandmarkTypes, moxCells));
                moxCells.cells[x][y] = MoxCells.MOX_CELL_VALUE;
                break;
             }
@@ -287,6 +298,7 @@ public class MoxWorx
       Utility.saveInt(writer, Morphognostic.NEIGHBORHOOD_DIMENSION_MULTIPLIER);
       Utility.saveInt(writer, Morphognostic.EPOCH_INTERVAL_STRIDE);
       Utility.saveInt(writer, Morphognostic.EPOCH_INTERVAL_MULTIPLIER);
+      Utility.saveInt(writer, numObstacleTypes);
 
       // Save cells.
       moxCells.save(output);
@@ -333,6 +345,7 @@ public class MoxWorx
       Morphognostic.NEIGHBORHOOD_DIMENSION_MULTIPLIER = Utility.loadInt(reader);
       Morphognostic.EPOCH_INTERVAL_STRIDE             = Utility.loadInt(reader);
       Morphognostic.EPOCH_INTERVAL_MULTIPLIER         = Utility.loadInt(reader);
+      numObstacleTypes = Utility.loadInt(reader);
 
       // Load cells.
       moxCells = new MoxCells();
@@ -462,7 +475,7 @@ public class MoxWorx
       {
          sensors[landmarkIndex] = 1.0f;
       }
-      if (moxCells.cells[fx][fy] == MoxCells.OBSTACLE_CELL_VALUE)
+      if (moxCells.cells[fx][fy] >= MoxCells.OBSTACLE_CELLS_BEGIN_VALUE)
       {
          mox.obstacleMap[fx][fy] = true;
       }
@@ -516,11 +529,11 @@ public class MoxWorx
       {
          if (moxen == null)
          {
-            dashboard = new MoxWorxDashboard(moxCells);
+            dashboard = new MoxWorxDashboard(moxCells, numObstacleTypes);
          }
          else
          {
-            dashboard = new MoxWorxDashboard(moxCells, moxen);
+            dashboard = new MoxWorxDashboard(moxCells, numObstacleTypes, moxen);
          }
       }
    }
@@ -594,17 +607,18 @@ public class MoxWorx
    public static void main(String[] args)
    {
       // Get options.
-      int     steps        = -1;
-      int     width        = -1;
-      int     height       = -1;
-      int     numMoxen     = -1;
-      int     numObstacles = -1;
-      int     numFoods     = -1;
-      int     randomSeed   = DEFAULT_RANDOM_SEED;
-      String  loadfile     = null;
-      String  savefile     = null;
-      boolean dashboard    = false;
-      boolean gotParm      = false;
+      int     steps            = -1;
+      int     width            = -1;
+      int     height           = -1;
+      int     numMoxen         = -1;
+      int     numObstacleTypes = -1;
+      int     numObstacles     = -1;
+      int     numFoods         = -1;
+      int     randomSeed       = DEFAULT_RANDOM_SEED;
+      String  loadfile         = null;
+      String  savefile         = null;
+      boolean dashboard        = false;
+      boolean gotParm          = false;
 
       for (int i = 0; i < args.length; i++)
       {
@@ -703,6 +717,32 @@ public class MoxWorx
             if (numMoxen < 0)
             {
                System.err.println("Invalid numMoxen option");
+               System.err.println(MoxWorx.Usage);
+               System.exit(1);
+            }
+            continue;
+         }
+         if (args[i].equals("-numObstacleTypes"))
+         {
+            i++;
+            if (i >= args.length)
+            {
+               System.err.println("Invalid numObstacleTypes option");
+               System.err.println(MoxWorx.Usage);
+               System.exit(1);
+            }
+            try
+            {
+               numObstacleTypes = Integer.parseInt(args[i]);
+            }
+            catch (NumberFormatException e) {
+               System.err.println("Invalid numObstacleTypes option");
+               System.err.println(MoxWorx.Usage);
+               System.exit(1);
+            }
+            if (numObstacleTypes < 1)
+            {
+               System.err.println("Invalid numObstacleTypes option");
                System.err.println(MoxWorx.Usage);
                System.exit(1);
             }
@@ -1008,13 +1048,14 @@ public class MoxWorx
             System.exit(1);
          }
          if (numMoxen == -1) { numMoxen = 0; }
+         if (numObstacleTypes == -1) { numObstacleTypes = 1; }
          if (numObstacles == -1) { numObstacles = 0; }
          if (numFoods == -1) { numFoods = 0; }
       }
       else
       {
-         if ((numMoxen != -1) || (numObstacles != -1) || (numFoods != -1) ||
-             (width != -1) || (height != -1) || gotParm)
+         if ((numMoxen != -1) || (numObstacleTypes != -1) || (numObstacles != -1) ||
+             (numFoods != -1) || (width != -1) || (height != -1) || gotParm)
          {
             System.err.println(MoxWorx.Usage);
             System.exit(1);
@@ -1049,8 +1090,8 @@ public class MoxWorx
       {
          try
          {
-            MoxWorx.initCells(width, height, numObstacles, numFoods);
-            MoxWorx.createMoxen(numMoxen);
+            MoxWorx.initCells(width, height, numObstacleTypes, numObstacles, numFoods);
+            MoxWorx.createMoxen(numMoxen, numObstacleTypes + 1);
          }
          catch (Exception e)
          {
