@@ -131,40 +131,42 @@ public class Morphognostic
          {
             for (int y0 = cy + dy, y1 = y0, y2 = y0 + dimension; y1 < y2; y1++)
             {
-               if ((x1 >= 0) && (x1 < landmarks.length) &&
-                   (y1 >= 0) && (y1 < landmarks[x1].length))
+               int x3 = x1;
+               while (x3 < 0) { x3 += landmarks.length; }
+               while (x3 >= landmarks.length) { x3 -= landmarks.length; }
+               int y3 = y1;
+               while (y3 < 0) { y3 += landmarks.length; }
+               while (y3 >= landmarks.length) { y3 -= landmarks.length; }
+               int t = -1;
+               for (int i = epoch + duration - 1; i >= epoch; i--)
                {
-                  int t = -1;
-                  for (int i = epoch + duration - 1; i >= epoch; i--)
+                  if (landmarks[x3][y3][i] != -1)
                   {
-                     if (landmarks[x1][y1][i] != -1)
-                     {
-                        t = landmarks[x1][y1][i];
-                     }
+                     t = landmarks[x3][y3][i];
                   }
-                  if (t != -1)
+               }
+               if (t != -1)
+               {
+                  for (int sx1 = 0, sx2 = sectors.length; sx1 < sx2; sx1++)
                   {
-                     for (int sx1 = 0, sx2 = sectors.length; sx1 < sx2; sx1++)
+                     for (int sy1 = 0, sy2 = sectors.length; sy1 < sy2; sy1++)
                      {
-                        for (int sy1 = 0, sy2 = sectors.length; sy1 < sy2; sy1++)
+                        int    x4 = x1 - x0;
+                        int    y4 = y1 - y0;
+                        Sector s  = sectors[sx1][sy1];
+                        if ((x4 >= s.dx) &&
+                            (x4 < (s.dx + s.dimension)) &&
+                            (y4 >= s.dy) &&
+                            (y4 < (s.dy + s.dimension)))
                         {
-                           int    x3 = x1 - x0;
-                           int    y3 = y1 - y0;
-                           Sector s  = sectors[sx1][sy1];
-                           if ((x3 >= s.dx) &&
-                               (x3 < (s.dx + s.dimension)) &&
-                               (y3 >= s.dy) &&
-                               (y3 < (s.dy + s.dimension)))
+                           int i = t;
+                           if (i >= MoxCells.OBSTACLE_CELLS_BEGIN_VALUE)
                            {
-                              int i = t;
-                              if (i >= MoxCells.OBSTACLE_CELLS_BEGIN_VALUE)
-                              {
-                                 i -= MoxCells.OBSTACLE_CELLS_BEGIN_VALUE;
-                                 i++;
-                              }
-                              s.typeDensities[i] += 1.0f;
-                              s.landmarks[x3 - s.dx][y3 - s.dy] = t;
+                              i -= MoxCells.OBSTACLE_CELLS_BEGIN_VALUE;
+                              i++;
                            }
+                           s.typeDensities[i] += 1.0f;
+                           s.landmarks[x4 - s.dx][y4 - s.dy] = t;
                         }
                      }
                   }
