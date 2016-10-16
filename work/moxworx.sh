@@ -1,2 +1,1 @@
-java -classpath "../bin" moxworx.MoxWorx $*
-
+java -jar ../bin/moxworx.jar $*

@@ -100,7 +100,7 @@ public class MoxWorx
       {
          for (y = 0; y < height; y++)
          {
-            moxCells.cells[x][y] = MoxCells.EMPTY_CELL_VALUE;
+            moxCells.cells[x][y] = moxCells.restoreCells[x][y] = MoxCells.EMPTY_CELL_VALUE;
          }
       }
 
@@ -119,7 +119,7 @@ public class MoxWorx
                {
                   k = random.nextInt(numObstacleTypes);
                }
-               moxCells.cells[x][y] = MoxCells.OBSTACLE_CELLS_BEGIN_VALUE + k;
+               moxCells.cells[x][y] = moxCells.restoreCells[x][y] = MoxCells.OBSTACLE_CELLS_BEGIN_VALUE + k;
                break;
             }
          }
@@ -134,7 +134,7 @@ public class MoxWorx
             y = random.nextInt(height);
             if (moxCells.cells[x][y] == MoxCells.EMPTY_CELL_VALUE)
             {
-               moxCells.cells[x][y] = MoxCells.FOOD_CELL_VALUE;
+               moxCells.cells[x][y] = moxCells.restoreCells[x][y] = MoxCells.FOOD_CELL_VALUE;
                break;
             }
          }
@@ -171,20 +171,6 @@ public class MoxWorx
    }
 
 
-   // Load cells from file.
-   public void loadCells(String cellsFilename) throws IOException
-   {
-      moxCells = new MoxCells();
-      try {
-         moxCells.load(cellsFilename);
-      }
-      catch (Exception e) {
-         throw new IOException("Cannot open cells file " + cellsFilename +
-                               ":" + e.getMessage());
-      }
-   }
-
-
    // Create moxen.
    public void createMoxen(int numMoxen, int numLandmarkTypes)
    {
@@ -206,7 +192,7 @@ public class MoxWorx
                int o = Orientation.NORTH;
                o = random.nextInt(Orientation.NUM_ORIENTATIONS);
                moxen.add(i, new Mox(i, x, y, o, numLandmarkTypes, moxCells));
-               moxCells.cells[x][y] = MoxCells.MOX_CELL_VALUE;
+               moxCells.cells[x][y] = moxCells.restoreCells[x][y] = MoxCells.MOX_CELL_VALUE;
                break;
             }
          }
@@ -370,7 +356,7 @@ public class MoxWorx
       for (int i = 0; i < steps; i++)
       {
          // Update dashboard.
-         updateDashboard(i + 1, steps);
+         if (updateDashboard(i + 1, steps)) { break; }
 
          // Step moxen.
          stepMoxen();
@@ -382,22 +368,13 @@ public class MoxWorx
    public void stepMoxen()
    {
       int i, j, numMoxen;
-      Mox mox;
-
-      // Load moxen into cells.
-      numMoxen = moxen.size();
-      for (i = 0; i < numMoxen; i++)
-      {
-         mox = moxen.get(i);
-         moxCells.cells[mox.x][mox.y] = MoxCells.MOX_CELL_VALUE;
-      }
 
       // Step moxen.
+      numMoxen = moxen.size();
       if (numMoxen > 0)
       {
          for (i = 0, j = random.nextInt(numMoxen); i < numMoxen; i++, j = (j + 1) % numMoxen)
          {
-            mox = moxen.get(j);
             stepMox(j);
          }
       }
@@ -551,7 +528,7 @@ public class MoxWorx
 
 
    // Update dashboard.
-   // Return true if dashboard operational.
+   // Return true for dashboard quit.
    public boolean updateDashboard(int step, int steps, String message)
    {
       if (dashboard != null)
@@ -561,11 +538,11 @@ public class MoxWorx
          if (dashboard.quit)
          {
             dashboard = null;
-            return(false);
+            return(true);
          }
          else
          {
-            return(true);
+            return(false);
          }
       }
       else
@@ -578,28 +555,6 @@ public class MoxWorx
    public boolean updateDashboard(int step, int steps)
    {
       return(updateDashboard(step, steps, ""));
-   }
-
-
-   public boolean updateDashboard()
-   {
-      if (dashboard != null)
-      {
-         dashboard.update();
-         if (dashboard.quit)
-         {
-            dashboard = null;
-            return(false);
-         }
-         else
-         {
-            return(true);
-         }
-      }
-      else
-      {
-         return(false);
-      }
    }
 
 

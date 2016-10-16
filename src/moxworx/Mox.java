@@ -8,6 +8,15 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Vector;
+import weka.classifiers.Evaluation;
+import weka.classifiers.functions.MultilayerPerceptron;
+import weka.core.Attribute;
+import weka.core.Debug;
+import weka.core.FastVector;
+import weka.core.Instance;
+import weka.core.Instances;
+import weka.core.Utils;
+import weka.core.converters.ArffSaver;
 
 // Mox.
 public class Mox
@@ -211,6 +220,7 @@ public class Mox
       Utility.saveInt(writer, x2);
       Utility.saveInt(writer, y2);
       Utility.saveInt(writer, direction2);
+      morphognostic.save(output);
       Utility.saveInt(writer, metamorphs.size());
       for (Metamorph m : metamorphs)
       {
@@ -245,13 +255,14 @@ public class Mox
       // DataInputStream is for unbuffered input.
       DataInputStream reader = new DataInputStream(input);
 
-      id         = Utility.loadInt(reader);
-      x          = Utility.loadInt(reader);
-      y          = Utility.loadInt(reader);
-      direction  = Utility.loadInt(reader);
-      x2         = Utility.loadInt(reader);
-      y2         = Utility.loadInt(reader);
-      direction2 = Utility.loadInt(reader);
+      id            = Utility.loadInt(reader);
+      x             = Utility.loadInt(reader);
+      y             = Utility.loadInt(reader);
+      direction     = Utility.loadInt(reader);
+      x2            = Utility.loadInt(reader);
+      y2            = Utility.loadInt(reader);
+      direction2    = Utility.loadInt(reader);
+      morphognostic = Morphognostic.load(input);
       metamorphs.clear();
       int n = Utility.loadInt(reader);
       for (int i = 0; i < n; i++)
