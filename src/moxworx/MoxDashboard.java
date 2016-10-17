@@ -93,7 +93,7 @@ public class MoxDashboard extends JFrame
       {
          setResponse("");
       }
-      setDriverChoice(mox.driverType);
+      setDriverChoice(mox.driver);
    }
 
 
@@ -212,8 +212,8 @@ public class MoxDashboard extends JFrame
          driverPanel.add(new JLabel("Driver:"));
          driverChoice = new Choice();
          driverPanel.add(driverChoice);
-         driverChoice.add("metamorph DB");
-         driverChoice.add("metamorph NN");
+         driverChoice.add("metamorphDB");
+         driverChoice.add("metamorphNN");
          driverChoice.add("autopilot");
          driverChoice.add("manual");
          driverChoice.addItemListener(this);
@@ -250,7 +250,7 @@ public class MoxDashboard extends JFrame
 
          if (source instanceof Choice && ((Choice)source == driverChoice))
          {
-            mox.driverType = driverChoice.getSelectedIndex();
+            mox.driver = driverChoice.getSelectedIndex();
             return;
          }
          if (source instanceof Checkbox && ((Checkbox)source == trainNNcheck))

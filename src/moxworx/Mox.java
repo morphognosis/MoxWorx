@@ -29,7 +29,7 @@ public class Mox
    public int      numLandmarkTypes;
    public int      x2, y2;
    public int      direction2;
-   public int      driverType;
+   public int      driver;
    public int      driverResponse;
 
    // Current morphognostic.
@@ -103,7 +103,7 @@ public class Mox
    {
       METAMORPH_DB(0),
       METAMORPH_NN(1),
-      AUTO(2),
+      AUTOPILOT(2),
       MANUAL(3);
 
       private int value;
@@ -150,7 +150,7 @@ public class Mox
          sensors[i] = 0.0f;
       }
       response       = WAIT;
-      driverType     = DRIVER_TYPE.METAMORPH_DB.getValue();
+      driver         = DRIVER_TYPE.METAMORPH_DB.getValue();
       driverResponse = WAIT;
       obstacleMap    = new boolean[moxCells.size.width][moxCells.size.height];
       for (int i = 0; i < moxCells.size.width; i++)
@@ -187,7 +187,7 @@ public class Mox
          sensors[i] = 0.0f;
       }
       response       = WAIT;
-      driverType     = DRIVER_TYPE.METAMORPH_DB.getValue();
+      driver         = DRIVER_TYPE.AUTOPILOT.getValue();
       driverResponse = WAIT;
       for (int i = 0; i < moxCells.size.width; i++)
       {
@@ -292,15 +292,15 @@ public class Mox
    public int cycle(float[] sensors)
    {
       this.sensors = sensors;
-      if (driverType == DRIVER_TYPE.METAMORPH_DB.getValue())
+      if (driver == DRIVER_TYPE.METAMORPH_DB.getValue())
       {
          metamorphDBresponse();
       }
-      else if (driverType == DRIVER_TYPE.METAMORPH_NN.getValue())
+      else if (driver == DRIVER_TYPE.METAMORPH_NN.getValue())
       {
          metamorphNNresponse();
       }
-      else if (driverType == DRIVER_TYPE.AUTO.getValue())
+      else if (driver == DRIVER_TYPE.AUTOPILOT.getValue())
       {
          autoResponse();
       }

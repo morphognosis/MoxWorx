@@ -42,6 +42,7 @@ public class MoxWorx
       "    java MoxWorx\n" +
       "      -steps <steps> | -dashboard\n" +
       "      -dimensions <width> <height>\n" +
+      "     [-driver <metamorphDB | metamorphNN | autopilot> (mox driver: default=autopilot)]\n" +
       "     [-numMoxen <quantity> (default=0)]\n" +
       "     [-numObstacleTypes <quantity> (default=1)]\n" +
       "     [-numObstacles <quantity> (default=0)]\n" +
@@ -58,6 +59,7 @@ public class MoxWorx
       "    java MoxWorx\n" +
       "      -steps <steps> | -dashboard\n" +
       "      -load <file name>\n" +
+      "     [-driver <metamorphDB | metamorphNN | autopilot> (default=autopilot)]\n" +
       "     [-randomSeed <random number seed>]\n" +
       "     [-save <file name>]";
 
@@ -562,6 +564,7 @@ public class MoxWorx
       int     steps            = -1;
       int     width            = -1;
       int     height           = -1;
+      int     driver           = Mox.DRIVER_TYPE.AUTOPILOT.getValue();
       int     numMoxen         = -1;
       int     numObstacleTypes = -1;
       int     numObstacles     = -1;
@@ -648,6 +651,35 @@ public class MoxWorx
             if (height < 2)
             {
                System.err.println("Invalid height option");
+               System.err.println(MoxWorx.Usage);
+               System.exit(1);
+            }
+            continue;
+         }
+         if (args[i].equals("-driver"))
+         {
+            i++;
+            if (i >= args.length)
+            {
+               System.err.println("Invalid driver option");
+               System.err.println(MoxWorx.Usage);
+               System.exit(1);
+            }
+            if (args[i].equals("metamorphDB"))
+            {
+               driver = Mox.DRIVER_TYPE.METAMORPH_DB.getValue();
+            }
+            else if (args[i].equals("metamorphNN"))
+            {
+               driver = Mox.DRIVER_TYPE.METAMORPH_NN.getValue();
+            }
+            else if (args[i].equals("autopilot"))
+            {
+               driver = Mox.DRIVER_TYPE.AUTOPILOT.getValue();
+            }
+            else
+            {
+               System.err.println("Invalid driver option");
                System.err.println(MoxWorx.Usage);
                System.exit(1);
             }
@@ -1056,6 +1088,24 @@ public class MoxWorx
       if (dashboard)
       {
          MoxWorx.createDashboard();
+      }
+
+      // Set mox driver.
+      for (Mox mox : MoxWorx.moxen)
+      {
+         mox.driver = driver;
+         if (driver == Mox.DRIVER_TYPE.METAMORPH_NN.getValue())
+         {
+            try
+            {
+               System.out.println("Training metamorph NN...");
+               mox.createMetamorphNN();
+            }
+            catch (Exception e)
+            {
+               System.err.println("Cannot train metamorph NN: " + e.getMessage());
+            }
+         }
       }
 
       // Run.
