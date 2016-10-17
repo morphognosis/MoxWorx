@@ -193,11 +193,12 @@ public class MoxDashboard extends JFrame
       private static final long serialVersionUID = 0L;
 
       // Components.
-      Choice  driverChoice;
-      JButton turnLeftButton;
-      JButton moveForwardButton;
-      JButton turnRightButton;
-      JButton eatButton;
+      Choice   driverChoice;
+      JButton  turnLeftButton;
+      JButton  moveForwardButton;
+      JButton  turnRightButton;
+      JButton  eatButton;
+      Checkbox trainNNcheck;
 
       // Constructor.
       public DriverPanel()
@@ -211,13 +212,14 @@ public class MoxDashboard extends JFrame
          driverPanel.add(new JLabel("Driver:"));
          driverChoice = new Choice();
          driverPanel.add(driverChoice);
-         driverChoice.add("mox");
-         driverChoice.add("auto");
+         driverChoice.add("metamorph DB");
+         driverChoice.add("metamorph NN");
+         driverChoice.add("autopilot");
          driverChoice.add("manual");
          driverChoice.addItemListener(this);
          JPanel responsePanel = new JPanel();
          responsePanel.setLayout(new FlowLayout());
-         add(responsePanel, BorderLayout.SOUTH);
+         add(responsePanel, BorderLayout.CENTER);
          turnLeftButton = new JButton("Left");
          turnLeftButton.addActionListener(this);
          responsePanel.add(turnLeftButton);
@@ -230,13 +232,43 @@ public class MoxDashboard extends JFrame
          eatButton = new JButton("Eat");
          eatButton.addActionListener(this);
          responsePanel.add(eatButton);
+         JPanel trainNNpanel = new JPanel();
+         trainNNpanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+         add(trainNNpanel, BorderLayout.SOUTH);
+         trainNNpanel.add(new JLabel("Train NN:"));
+         trainNNcheck = new Checkbox();
+         trainNNcheck.setState(false);
+         trainNNcheck.addItemListener(this);
+         trainNNpanel.add(trainNNcheck);
       }
 
 
       // Choice listener.
-      public void itemStateChanged(ItemEvent e)
+      public void itemStateChanged(ItemEvent evt)
       {
-         mox.driverType = driverChoice.getSelectedIndex();
+         Object source = evt.getSource();
+
+         if (source instanceof Choice && ((Choice)source == driverChoice))
+         {
+            mox.driverType = driverChoice.getSelectedIndex();
+            return;
+         }
+         if (source instanceof Checkbox && ((Checkbox)source == trainNNcheck))
+         {
+            if (trainNNcheck.getState())
+            {
+               try
+               {
+                  mox.createMetamorphNN();
+               }
+               catch (Exception e)
+               {
+                  worxDashboard.controls.messageText.setText("Cannot train metamorph NN: " + e.getMessage());
+               }
+               trainNNcheck.setState(false);
+            }
+            return;
+         }
       }
 
 

@@ -152,9 +152,9 @@ public class MoxWorxDashboard extends JFrame
 
 
    // Update dashboard.
-   public void update(int step, int steps)
+   public void update(int steps)
    {
-      controls.updateStepCounter(step, steps);
+      controls.updateStepCounter(steps);
       update();
    }
 
@@ -572,9 +572,9 @@ public class MoxWorxDashboard extends JFrame
 
 
       // Update step counter display
-      void updateStepCounter(int step, int steps)
+      void updateStepCounter(int steps)
       {
-         stepCounter.setText("Step: " + step + "/" + steps);
+         stepCounter.setText("Steps: " + steps);
       }
 
 

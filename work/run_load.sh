@@ -1,1 +1,1 @@
-./moxworx.sh -steps 100 -dashboard -load run.out
+./moxworx.sh -dashboard -load run.out

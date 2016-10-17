@@ -40,7 +40,7 @@ public class MoxWorx
       "Usage:\n" +
       "  New run:\n" +
       "    java MoxWorx\n" +
-      "      -steps <steps>\n" +
+      "      -steps <steps> | -dashboard\n" +
       "      -dimensions <width> <height>\n" +
       "     [-numMoxen <quantity> (default=0)]\n" +
       "     [-numObstacleTypes <quantity> (default=1)]\n" +
@@ -54,14 +54,12 @@ public class MoxWorx
       "     [-epochIntervalMultiplier <quantity> (default=" + Morphognostic.EPOCH_INTERVAL_MULTIPLIER + ")]\n" +
       "     [-randomSeed <random number seed>]\n" +
       "     [-save <file name>]\n" +
-      "     [-dashboard]\n" +
       "  Resume run:\n" +
       "    java MoxWorx\n" +
-      "      -steps <steps>\n" +
+      "      -steps <steps> | -dashboard\n" +
       "      -load <file name>\n" +
       "     [-randomSeed <random number seed>]\n" +
-      "     [-save <file name>]\n" +
-      "     [-dashboard]";
+      "     [-save <file name>]";
 
    // Default random seed.
    public static final int DEFAULT_RANDOM_SEED = 4517;
@@ -353,13 +351,19 @@ public class MoxWorx
    // Run.
    public void run(int steps)
    {
-      for (int i = 0; i < steps; i++)
+      if (steps >= 0)
       {
-         // Update dashboard.
-         if (updateDashboard(i + 1, steps)) { break; }
-
-         // Step moxen.
-         stepMoxen();
+         for (int i = 0; i < steps; i++)
+         {
+            stepMoxen();
+         }
+      }
+      else
+      {
+         for (int i = 0; updateDashboard(i); i++)
+         {
+            stepMoxen();
+         }
       }
    }
 
@@ -528,33 +532,26 @@ public class MoxWorx
 
 
    // Update dashboard.
-   // Return true for dashboard quit.
-   public boolean updateDashboard(int step, int steps, String message)
+   // Return false for dashboard quit.
+   public boolean updateDashboard(int steps)
    {
       if (dashboard != null)
       {
-         dashboard.setMessage(message);
-         dashboard.update(step, steps);
+         dashboard.update(steps);
          if (dashboard.quit)
          {
             dashboard = null;
-            return(true);
+            return(false);
          }
          else
          {
-            return(false);
+            return(true);
          }
       }
       else
       {
          return(false);
       }
-   }
-
-
-   public boolean updateDashboard(int step, int steps)
-   {
-      return(updateDashboard(step, steps, ""));
    }
 
 
@@ -601,6 +598,11 @@ public class MoxWorx
                System.err.println(MoxWorx.Usage);
                System.exit(1);
             }
+            continue;
+         }
+         if (args[i].equals("-dashboard"))
+         {
+            dashboard = true;
             continue;
          }
          if (args[i].equals("-dimensions"))
@@ -980,17 +982,12 @@ public class MoxWorx
             }
             continue;
          }
-         if (args[i].equals("-dashboard"))
-         {
-            dashboard = true;
-            continue;
-         }
          System.err.println(MoxWorx.Usage);
          System.exit(1);
       }
 
       // Check options.
-      if (steps < 0)
+      if (((steps < 0) && !dashboard) || ((steps >= 0) && dashboard))
       {
          System.err.println(MoxWorx.Usage);
          System.exit(1);

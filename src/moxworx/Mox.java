@@ -32,9 +32,17 @@ public class Mox
    public int      driverType;
    public int      driverResponse;
 
-   // Learning.
-   public Morphognostic        morphognostic;
+   // Current morphognostic.
+   public Morphognostic morphognostic;
+
+   // Metamorphs.
    public ArrayList<Metamorph> metamorphs;
+   public FastVector           metamorphNNattributeNames;
+   public Instances            metamorphInstances;
+   MultilayerPerceptron        metamorphNN;
+   public static final boolean saveMetamorphInstances = false;
+   public static final boolean saveMetamorphNN        = false;
+   public static final boolean evaluateMetamorphNN    = true;
 
    // Input/output.
    float[] sensors;
@@ -64,10 +72,11 @@ public class Mox
 
    // Response types.
    public static           final int WAIT = 0;
-   public static final int FORWARD = 1;
-   public static final int RIGHT   = 2;
-   public static final int LEFT    = 3;
-   public static final int EAT     = 4;
+   public static final int FORWARD       = 1;
+   public static final int RIGHT         = 2;
+   public static final int LEFT          = 3;
+   public static final int EAT           = 4;
+   public static final int NUM_RESPONSES = 5;
 
    // Navigation.
    public boolean[][] obstacleMap;
@@ -92,9 +101,10 @@ public class Mox
    // Driver type.
    public enum DRIVER_TYPE
    {
-      MOX(0),
-      AUTO(1),
-      MANUAL(2);
+      METAMORPH_DB(0),
+      METAMORPH_NN(1),
+      AUTO(2),
+      MANUAL(3);
 
       private int value;
 
@@ -140,7 +150,7 @@ public class Mox
          sensors[i] = 0.0f;
       }
       response       = WAIT;
-      driverType     = DRIVER_TYPE.MOX.getValue();
+      driverType     = DRIVER_TYPE.METAMORPH_DB.getValue();
       driverResponse = WAIT;
       obstacleMap    = new boolean[moxCells.size.width][moxCells.size.height];
       for (int i = 0; i < moxCells.size.width; i++)
@@ -152,10 +162,11 @@ public class Mox
       }
       landmarkEvents = new Vector<LandmarkEvent>();
       morphognostic  = new Morphognostic(direction, numLandmarkTypes);
-      metamorphs     = new ArrayList<Metamorph>();
       Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(Morphognostic.NUM_NEIGHBORHOODS - 1);
       maxLandmarkEventAge = n.epoch + n.duration - 1;
-      eventTime           = 0;
+      metamorphs          = new ArrayList<Metamorph>();
+      initMetamorphNN();
+      eventTime = 0;
    }
 
 
@@ -176,7 +187,7 @@ public class Mox
          sensors[i] = 0.0f;
       }
       response       = WAIT;
-      driverType     = DRIVER_TYPE.MOX.getValue();
+      driverType     = DRIVER_TYPE.METAMORPH_DB.getValue();
       driverResponse = WAIT;
       for (int i = 0; i < moxCells.size.width; i++)
       {
@@ -217,10 +228,12 @@ public class Mox
       Utility.saveInt(writer, x);
       Utility.saveInt(writer, y);
       Utility.saveInt(writer, direction);
+      Utility.saveInt(writer, numLandmarkTypes);
       Utility.saveInt(writer, x2);
       Utility.saveInt(writer, y2);
       Utility.saveInt(writer, direction2);
       morphognostic.save(output);
+      Utility.saveInt(writer, maxLandmarkEventAge);
       Utility.saveInt(writer, metamorphs.size());
       for (Metamorph m : metamorphs)
       {
@@ -255,20 +268,23 @@ public class Mox
       // DataInputStream is for unbuffered input.
       DataInputStream reader = new DataInputStream(input);
 
-      id            = Utility.loadInt(reader);
-      x             = Utility.loadInt(reader);
-      y             = Utility.loadInt(reader);
-      direction     = Utility.loadInt(reader);
-      x2            = Utility.loadInt(reader);
-      y2            = Utility.loadInt(reader);
-      direction2    = Utility.loadInt(reader);
-      morphognostic = Morphognostic.load(input);
+      id                  = Utility.loadInt(reader);
+      x                   = Utility.loadInt(reader);
+      y                   = Utility.loadInt(reader);
+      direction           = Utility.loadInt(reader);
+      numLandmarkTypes    = Utility.loadInt(reader);
+      x2                  = Utility.loadInt(reader);
+      y2                  = Utility.loadInt(reader);
+      direction2          = Utility.loadInt(reader);
+      morphognostic       = Morphognostic.load(input);
+      maxLandmarkEventAge = Utility.loadInt(reader);
       metamorphs.clear();
       int n = Utility.loadInt(reader);
       for (int i = 0; i < n; i++)
       {
          metamorphs.add(Metamorph.load(input));
       }
+      initMetamorphNN();
    }
 
 
@@ -276,9 +292,13 @@ public class Mox
    public int cycle(float[] sensors)
    {
       this.sensors = sensors;
-      if (driverType == DRIVER_TYPE.MOX.getValue())
+      if (driverType == DRIVER_TYPE.METAMORPH_DB.getValue())
       {
-         myResponse();
+         metamorphDBresponse();
+      }
+      else if (driverType == DRIVER_TYPE.METAMORPH_NN.getValue())
+      {
+         metamorphNNresponse();
       }
       else if (driverType == DRIVER_TYPE.AUTO.getValue())
       {
@@ -349,8 +369,8 @@ public class Mox
    }
 
 
-   // Get response.
-   void myResponse()
+   // Get metamorph DB response.
+   void metamorphDBresponse()
    {
       if (sensors[Mox.SENSOR_CONFIG.FOOD_SENSOR_INDEX.getValue()] == 1.0f)
       {
@@ -379,7 +399,21 @@ public class Mox
    }
 
 
-   // Auto response.
+   // Get metamorph neural network response.
+   void metamorphNNresponse()
+   {
+      if (sensors[Mox.SENSOR_CONFIG.FOOD_SENSOR_INDEX.getValue()] == 1.0f)
+      {
+         response = EAT;
+      }
+      else
+      {
+         response = classifyMorphognostic(morphognostic);
+      }
+   }
+
+
+   // Autopilot response.
    void autoResponse()
    {
       // Search for best response leading to food.
@@ -552,5 +586,138 @@ public class Mox
       {
          return(foodDist - s.foodDist);
       }
+   }
+
+   // Initialize metamorph neural network.
+   public void initMetamorphNN()
+   {
+      metamorphNNattributeNames = new FastVector();
+      for (int i = 0; i < Morphognostic.NUM_NEIGHBORHOODS; i++)
+      {
+         int n = morphognostic.neighborhoods.get(i).sectors.length;
+         for (int x = 0; x < n; x++)
+         {
+            for (int y = 0; y < n; y++)
+            {
+               for (int j = 0; j < morphognostic.numLandmarkTypes; j++)
+               {
+                  metamorphNNattributeNames.addElement(new Attribute(i + "-" + x + "-" + y + "-" + j));
+               }
+            }
+         }
+      }
+      FastVector responseVals = new FastVector();
+      for (int i = 0; i < NUM_RESPONSES; i++)
+      {
+         responseVals.addElement(i + "");
+      }
+      metamorphNNattributeNames.addElement(new Attribute("type", responseVals));
+      metamorphInstances = new Instances("metamorphs", metamorphNNattributeNames, 0);
+      metamorphNN        = new MultilayerPerceptron();
+   }
+
+
+   // Create and train metamorph neural network.
+   public void createMetamorphNN() throws Exception
+   {
+      // Create instances.
+      metamorphInstances = new Instances("metamorphs", metamorphNNattributeNames, 0);
+      for (Metamorph m : metamorphs)
+      {
+         metamorphInstances.add(createInstance(metamorphInstances, m));
+      }
+      metamorphInstances.setClassIndex(metamorphInstances.numAttributes() - 1);
+
+      // Create and train the neural network.
+      MultilayerPerceptron mlp = new MultilayerPerceptron();
+      metamorphNN = mlp;
+      mlp.setLearningRate(0.1);
+      mlp.setMomentum(0.2);
+      mlp.setTrainingTime(2000);
+      mlp.setHiddenLayers("20");
+      mlp.setOptions(Utils.splitOptions("-L 0.1 -M 0.2 -N 2000 -V 0 -S 0 -E 20 -H 20"));
+      mlp.buildClassifier(metamorphInstances);
+
+      // Save training instances?
+      if (saveMetamorphInstances)
+      {
+         ArffSaver saver = new ArffSaver();
+         saver.setInstances(metamorphInstances);
+         saver.setFile(new File("metamorphInstances.arff"));
+         saver.writeBatch();
+      }
+
+      // Save networks?
+      if (saveMetamorphNN)
+      {
+         Debug.saveToFile("metamorphNN.dat", mlp);
+      }
+
+      // Evaluate the network.
+      if (evaluateMetamorphNN)
+      {
+         Evaluation eval = new Evaluation(metamorphInstances);
+         eval.evaluateModel(mlp, metamorphInstances);
+         System.out.println("Error rate=" + eval.errorRate());
+         System.out.println(eval.toSummaryString());
+      }
+   }
+
+
+   // Create metamorph NN instance.
+   Instance createInstance(Instances instances, Metamorph m)
+   {
+      double[]  attrValues = new double[instances.numAttributes()];
+      int a = 0;
+      for (int i = 0; i < Morphognostic.NUM_NEIGHBORHOODS; i++)
+      {
+         int n = m.morphognostic.neighborhoods.get(i).sectors.length;
+         for (int x = 0; x < n; x++)
+         {
+            for (int y = 0; y < n; y++)
+            {
+               Morphognostic.Neighborhood.Sector s = m.morphognostic.neighborhoods.get(i).sectors[x][y];
+               for (int j = 0; j < s.typeDensities.length; j++)
+               {
+                  attrValues[a] = s.typeDensities[j];
+                  a++;
+               }
+            }
+         }
+      }
+      attrValues[a] = instances.attribute(a).indexOfValue(m.response + "");
+      a++;
+      return(new Instance(1.0, attrValues));
+   }
+
+
+   // Use metamorph NN to classify morphognostic as a response.
+   public int classifyMorphognostic(Morphognostic morphognostic)
+   {
+      Metamorph metamorph = new Metamorph(morphognostic, 0);
+      int       response  = 0;
+
+      try
+      {
+         // Classify.
+         Instance instance        = createInstance(metamorphInstances, metamorph);
+         int      predictionIndex = (int)metamorphNN.classifyInstance(instance);
+
+         // Get the predicted class label from the predictionIndex.
+         String predictedClassLabel = metamorphInstances.classAttribute().value(predictionIndex);
+         response = Integer.parseInt(predictedClassLabel);
+
+         // Get the prediction probability distribution.
+         //double[] predictionDistribution = metamorphNN.distributionForInstance(instance);
+
+         // Get morphognostic distance from prediction probability.
+         //float dist = (1.0f - (float)predictionDistribution[predictionIndex]);
+      }
+      catch (Exception e)
+      {
+         System.err.println("Error classifying morphognostic:");
+         e.printStackTrace();
+      }
+      return(response);
    }
 }
