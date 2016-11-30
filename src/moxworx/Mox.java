@@ -48,30 +48,11 @@ public class Mox
    float[] sensors;
    int response;
 
-   // Sensor configuration.
-   public enum SENSOR_CONFIG
-   {
-      NUM_LANDMARK_SENSORS(1),
-      LANDMARK_SENSOR_INDEX(0),
-      NUM_FOOD_SENSORS(1),
-      FOOD_SENSOR_INDEX(1),
-      NUM_SENSORS(2);
-
-      private int value;
-
-      SENSOR_CONFIG(int value)
-      {
-         this.value = value;
-      }
-
-      public int getValue()
-      {
-         return(value);
-      }
-   }
+   // Sensor dimensions.
+   public static final int NUM_SENSORS = 2;
 
    // Response types.
-   public static           final int WAIT = 0;
+   public static final int WAIT          = 0;
    public static final int FORWARD       = 1;
    public static final int RIGHT         = 2;
    public static final int LEFT          = 3;
@@ -144,8 +125,8 @@ public class Mox
       this.x         = x2 = x;
       this.y         = y2 = y;
       this.direction = direction2 = direction;
-      sensors        = new float[SENSOR_CONFIG.NUM_SENSORS.getValue()];
-      for (int i = 0; i < SENSOR_CONFIG.NUM_SENSORS.getValue(); i++)
+      sensors        = new float[NUM_SENSORS];
+      for (int i = 0; i < NUM_SENSORS; i++)
       {
          sensors[i] = 0.0f;
       }
@@ -182,7 +163,7 @@ public class Mox
       x         = x2;
       y         = y2;
       direction = direction2;
-      for (int i = 0; i < SENSOR_CONFIG.NUM_SENSORS.getValue(); i++)
+      for (int i = 0; i < NUM_SENSORS; i++)
       {
          sensors[i] = 0.0f;
       }
@@ -289,56 +270,16 @@ public class Mox
 
 
    // Sensor/response cycle.
-   public int cycle(float[] sensors)
+   public int cycle(float[] sensors, int fx, int fy)
    {
       this.sensors = sensors;
-      if (driver == DRIVER_TYPE.METAMORPH_DB.getValue())
-      {
-         metamorphDBresponse();
-      }
-      else if (driver == DRIVER_TYPE.METAMORPH_NN.getValue())
-      {
-         metamorphNNresponse();
-      }
-      else if (driver == DRIVER_TYPE.AUTOPILOT.getValue())
-      {
-         autoResponse();
-      }
-      else
-      {
-         response = driverResponse;
-      }
-      return(response);
-   }
 
-
-   // Landmark event.
-   public void landmark(int fx, int fy)
-   {
-      // Save event.
+      // Update morphognostic.
       landmarkEvents.add(new LandmarkEvent(moxCells.cells[fx][fy], fx, fy, eventTime));
       if ((eventTime - landmarkEvents.get(0).time) > maxLandmarkEventAge)
       {
          landmarkEvents.remove(0);
       }
-
-      // Update metamorphs.
-      Metamorph metamorph = new Metamorph(morphognostic.clone(), response);
-      boolean   found     = false;
-      for (Metamorph m : metamorphs)
-      {
-         if (m.equals(metamorph))
-         {
-            found = true;
-            break;
-         }
-      }
-      if (!found)
-      {
-         metamorphs.add(metamorph);
-      }
-
-      // Update morphognostic.
       int w = moxCells.size.width;
       int h = moxCells.size.height;
       int a = maxLandmarkEventAge + 1;
@@ -365,36 +306,65 @@ public class Mox
          }
       }
       morphognostic.update(landmarks, x, y);
+
+      // Respond.
+      if (driver == DRIVER_TYPE.METAMORPH_DB.getValue())
+      {
+         metamorphDBresponse();
+      }
+      else if (driver == DRIVER_TYPE.METAMORPH_NN.getValue())
+      {
+         metamorphNNresponse();
+      }
+      else if (driver == DRIVER_TYPE.AUTOPILOT.getValue())
+      {
+         autoResponse();
+      }
+      else
+      {
+         response = driverResponse;
+      }
+
+      // Update metamorphs.
+      Metamorph metamorph = new Metamorph(morphognostic.clone(), response);
+      boolean   found     = false;
+      for (Metamorph m : metamorphs)
+      {
+         if (m.equals(metamorph))
+         {
+            found = true;
+            break;
+         }
+      }
+      if (!found)
+      {
+         metamorphs.add(metamorph);
+      }
+
       eventTime++;
+      return(response);
    }
 
 
    // Get metamorph DB response.
    void metamorphDBresponse()
    {
-      if (sensors[Mox.SENSOR_CONFIG.FOOD_SENSOR_INDEX.getValue()] == 1.0f)
+      response = WAIT;
+      Metamorph metamorph = null;
+      float     d         = 0.0f;
+      float     d2;
+      for (Metamorph m : metamorphs)
       {
-         response = EAT;
+         d2 = morphognostic.compare(m.morphognostic);
+         if ((metamorph == null) || (d2 < d))
+         {
+            d         = d2;
+            metamorph = m;
+         }
       }
-      else
+      if (metamorph != null)
       {
-         response = WAIT;
-         Metamorph metamorph = null;
-         float     d         = 0.0f;
-         float     d2;
-         for (Metamorph m : metamorphs)
-         {
-            d2 = morphognostic.compare(m.morphognostic);
-            if ((metamorph == null) || (d2 < d))
-            {
-               d         = d2;
-               metamorph = m;
-            }
-         }
-         if (metamorph != null)
-         {
-            response = metamorph.response;
-         }
+         response = metamorph.response;
       }
    }
 
@@ -402,14 +372,7 @@ public class Mox
    // Get metamorph neural network response.
    void metamorphNNresponse()
    {
-      if (sensors[Mox.SENSOR_CONFIG.FOOD_SENSOR_INDEX.getValue()] == 1.0f)
-      {
-         response = EAT;
-      }
-      else
-      {
-         response = classifyMorphognostic(morphognostic);
-      }
+      response = classifyMorphognostic(morphognostic);
    }
 
 

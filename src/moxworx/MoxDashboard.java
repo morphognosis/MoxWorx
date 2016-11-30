@@ -15,6 +15,10 @@ public class MoxDashboard extends JFrame
 {
    private static final long serialVersionUID = 0L;
 
+   // Sensor semantics.
+   static final int LANDMARK_SENSOR_INDEX = 0;
+   static final int FOOD_SENSOR_INDEX     = 1;
+
    // Components.
    SensorsResponsePanel sensorsResponse;
    DriverPanel          driver;
@@ -66,9 +70,9 @@ public class MoxDashboard extends JFrame
    // Update dashboard.
    void update()
    {
-      float f = (float)((int)(mox.sensors[Mox.SENSOR_CONFIG.FOOD_SENSOR_INDEX.getValue()] * 100.0f)) / 100.0f;
+      float f = (float)((int)(mox.sensors[FOOD_SENSOR_INDEX] * 100.0f)) / 100.0f;
 
-      setSensors(mox.sensors[Mox.SENSOR_CONFIG.LANDMARK_SENSOR_INDEX.getValue()] + "", f + "");
+      setSensors(mox.sensors[LANDMARK_SENSOR_INDEX] + "", f + "");
       if (mox.response == Mox.WAIT)
       {
          setResponse("wait");

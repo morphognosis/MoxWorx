@@ -33,11 +33,9 @@ public class MoxCells
       this.size    = size;
       cells        = new int[size.width][size.height];
       restoreCells = new int[size.width][size.height];
-      int x;
-      int y;
-      for (x = 0; x < size.width; x++)
+      for (int x = 0; x < size.width; x++)
       {
-         for (y = 0; y < size.height; y++)
+         for (int y = 0; y < size.height; y++)
          {
             cells[x][y] = restoreCells[x][y] = 0;
          }

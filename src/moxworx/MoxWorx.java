@@ -29,7 +29,6 @@ package moxworx;
 import java.util.*;
 import java.io.*;
 import java.awt.*;
-
 import javax.swing.*;
 
 // Mox world.
@@ -61,7 +60,18 @@ public class MoxWorx
       "      -load <file name>\n" +
       "     [-driver <metamorphDB | metamorphNN | autopilot> (default=autopilot)]\n" +
       "     [-randomSeed <random number seed>]\n" +
-      "     [-save <file name>]";
+      "     [-save <file name>]\n" +
+      "  Pong run:\n" +
+      "    java MoxWorx\n" +
+      "      -pongTrainingFile <file name>\n" +
+      "      -pongTestingFile <file name>\n" +
+      "     [-numNeighborhoods <quantity> (default=" + Morphognostic.NUM_NEIGHBORHOODS + ")]\n" +
+      "     [-neighborhoodInitialDimension <quantity> (default=" + Morphognostic.NEIGHBORHOOD_INITIAL_DIMENSION + ")]\n" +
+      "     [-neighborhoodDimensionStride <quantity> (default=" + Morphognostic.NEIGHBORHOOD_DIMENSION_STRIDE + ")]\n" +
+      "     [-neighborhoodDimensionMultiplier <quantity> (default=" + Morphognostic.NEIGHBORHOOD_DIMENSION_MULTIPLIER + ")]\n" +
+      "     [-epochIntervalStride <quantity> (default=" + Morphognostic.EPOCH_INTERVAL_STRIDE + ")]\n" +
+      "     [-epochIntervalMultiplier <quantity> (default=" + Morphognostic.EPOCH_INTERVAL_MULTIPLIER + ")]\n" +
+      "     [-randomSeed <random number seed>]\n";
 
    // Default random seed.
    public static final int DEFAULT_RANDOM_SEED = 4517;
@@ -242,15 +252,7 @@ public class MoxWorx
          dashboard = null;
       }
       moxCells = null;
-      if (moxen != null)
-      {
-         int numMoxen = moxen.size();
-         for (int i = 0; i < numMoxen; i++)
-         {
-            moxen.get(i).init();
-         }
-         moxen = null;
-      }
+      moxen    = null;
    }
 
 
@@ -396,9 +398,9 @@ public class MoxWorx
       int response;
       Mox mox;
 
-      float[] sensors        = new float[Mox.SENSOR_CONFIG.NUM_SENSORS.getValue()];
-      landmarkIndex          = Mox.SENSOR_CONFIG.LANDMARK_SENSOR_INDEX.getValue();
-      foodIndex              = Mox.SENSOR_CONFIG.FOOD_SENSOR_INDEX.getValue();
+      float[] sensors        = new float[Mox.NUM_SENSORS];
+      landmarkIndex          = MoxDashboard.LANDMARK_SENSOR_INDEX;
+      foodIndex              = MoxDashboard.FOOD_SENSOR_INDEX;
       sensors[landmarkIndex] = 0.0f;
       sensors[foodIndex]     = 0.0f;
       width  = moxCells.size.width;
@@ -467,10 +469,7 @@ public class MoxWorx
       sensors[foodIndex] = 1.0f / ((float)moxCells.foodDist(fx, fy) + 1.0f);
 
       // Cycle mox.
-      response = mox.cycle(sensors);
-
-      // Landmark event.
-      mox.landmark(fx, fy);
+      response = mox.cycle(sensors, fx, fy);
 
       // Process response.
       if (response == Mox.FORWARD)
@@ -557,6 +556,246 @@ public class MoxWorx
    }
 
 
+   // Pong sensory-response event.
+   class PongEvent
+   {
+      int ballState;
+      int paddleState;
+      int response;
+      PongEvent(int ballState, int paddleState, int response)
+      {
+         this.ballState   = ballState;
+         this.paddleState = paddleState;
+         this.response    = response;
+      }
+   };
+
+   // Pong game sequence.
+   class PongGame
+   {
+      int number;
+      ArrayList<PongEvent> sequence;
+      PongGame(int number)
+      {
+         this.number = number;
+         sequence    = new ArrayList<PongEvent>();
+      }
+   };
+
+   // Pong dimensions.
+   int pongDimensions;
+
+   // Pong training and testing games.
+   ArrayList<PongGame> pongTrainingGames;
+   ArrayList<PongGame> pongTestingGames;
+
+   // Load pong games.
+   // Return dimensions.
+   int loadPongGames(String filename, ArrayList<PongGame> games) throws IOException
+   {
+      int dimensions;
+
+      BufferedReader input;
+
+      try
+      {
+         input = new BufferedReader(new FileReader(filename));
+      }
+      catch (Exception e)
+      {
+         throw new IOException("Cannot open input file " + filename + ":" + e.getMessage());
+      }
+
+      // Load dimensions.
+      String s = input.readLine();
+      dimensions = Integer.parseInt(s);
+
+      // Load game sequences.
+      try
+      {
+         PongGame currentGame = null;
+         while ((s = input.readLine()) != null)
+         {
+            String[] p = s.split(",");
+            int       gameNum     = Integer.parseInt(p[0]);
+            int       ballState   = Integer.parseInt(p[1]);
+            int       paddleState = Integer.parseInt(p[2]);
+            int       response    = Integer.parseInt(p[3]);
+            PongEvent e           = new PongEvent(ballState, paddleState, response);
+            if ((currentGame == null) || (gameNum != currentGame.number))
+            {
+               currentGame = new PongGame(gameNum);
+               games.add(currentGame);
+            }
+            currentGame.sequence.add(e);
+         }
+      }
+      catch (Exception e) {}
+      input.close();
+      return(dimensions);
+   }
+
+
+   // Load pong.
+   public void loadPong(String pongTrainingFile, String pongTestingFile) throws IOException
+   {
+      // Load training games.
+      pongTrainingGames = new ArrayList<PongGame>();
+      pongDimensions    = loadPongGames(pongTrainingFile, pongTrainingGames);
+
+      // Load testing games.
+      pongTestingGames = new ArrayList<PongGame>();
+      int d = loadPongGames(pongTestingFile, pongTestingGames);
+      if (d != pongDimensions)
+      {
+         System.err.println("Training and testing dimensions mismatch");
+         System.exit(1);
+      }
+   }
+
+
+   // Run pong.
+   public void runPong() throws Exception
+   {
+      Dimension dimensions = new Dimension();
+
+      dimensions.width  = pongDimensions;
+      dimensions.height = dimensions.width;
+      moxCells          = new MoxCells(dimensions);
+      moxen             = new ArrayList<Mox>();
+      int x   = dimensions.width / 2;
+      int y   = x;
+      Mox mox = new Mox(0, x, y, Orientation.NORTH, 8, moxCells);
+      moxen.add(0, mox);
+
+      // Train.
+      mox.driver = Mox.DRIVER_TYPE.MANUAL.getValue();
+      for (PongGame game : pongTrainingGames)
+      {
+         System.out.println("Training game = " + game.number);
+         playPongGame(game, mox);
+      }
+
+      // Test.
+      mox.driver = Mox.DRIVER_TYPE.METAMORPH_DB.getValue();
+      //mox.driver = Mox.DRIVER_TYPE.METAMORPH_NN.getValue();
+      //mox.createMetamorphNN();
+      for (PongGame game : pongTestingGames)
+      {
+         System.out.print("Testing game = " + game.number);
+         if (playPongGame(game, mox))
+         {
+            System.out.println(": success");
+         }
+         else
+         {
+            System.out.println(": fail");
+         }
+      }
+   }
+
+
+   // Play pong game.
+   public boolean playPongGame(PongGame game, Mox mox)
+   {
+      boolean result = true;
+
+      float[] sensors = new float[2];
+      int driver = mox.driver;
+      reset();
+      mox.driver = driver;
+      for (PongEvent e : game.sequence)
+      {
+         // Set up landmark and sensors.
+         if (e.ballState > 0)
+         {
+            if (e.paddleState == 0)
+            {
+               moxCells.cells[mox.x][mox.y] = e.ballState + MoxCells.OBSTACLE_CELLS_BEGIN_VALUE - 1;
+               sensors[0] = (float)(e.ballState + MoxCells.OBSTACLE_CELLS_BEGIN_VALUE - 1);
+            }
+            else
+            {
+               moxCells.cells[mox.x][mox.y] = MoxCells.OBSTACLE_CELLS_BEGIN_VALUE + 5;
+               sensors[0] = (float)(MoxCells.OBSTACLE_CELLS_BEGIN_VALUE + 5);
+            }
+         }
+         else if (e.paddleState > 0)
+         {
+            moxCells.cells[mox.x][mox.y] = MoxCells.OBSTACLE_CELLS_BEGIN_VALUE + 6;
+            sensors[0] = (float)(MoxCells.OBSTACLE_CELLS_BEGIN_VALUE + 6);
+         }
+         else
+         {
+            moxCells.cells[mox.x][mox.y] = MoxCells.EMPTY_CELL_VALUE;
+            sensors[0] = (float)MoxCells.EMPTY_CELL_VALUE;
+         }
+         sensors[1] = 0.0f;
+
+         // Cycle mox.
+         if (mox.driver == Mox.DRIVER_TYPE.MANUAL.getValue())
+         {
+            mox.driverResponse = e.response;
+         }
+         int response = mox.cycle(sensors, mox.x, mox.y);
+         if (response != e.response)
+         {
+            result = false;
+         }
+
+         // Process response.
+         if (response == Mox.FORWARD)
+         {
+            int width  = moxCells.size.width;
+            int height = moxCells.size.height;
+            switch (mox.direction)
+            {
+            case Orientation.NORTH:
+               if (mox.y < height - 1)
+               {
+                  mox.y++;
+               }
+               break;
+
+            case Orientation.EAST:
+               if (mox.x < width - 1)
+               {
+                  mox.x++;
+               }
+               break;
+
+            case Orientation.SOUTH:
+               if (mox.y > 0)
+               {
+                  mox.y--;
+               }
+               break;
+
+            case Orientation.WEST:
+               if (mox.x > 0)
+               {
+                  mox.x--;
+               }
+               break;
+            }
+         }
+         else if (response == Mox.RIGHT)
+         {
+            mox.direction = (mox.direction + 1) % Orientation.NUM_ORIENTATIONS;
+         }
+         else if (response == Mox.LEFT)
+         {
+            mox.direction = mox.direction - 1;
+            if (mox.direction < 0)
+            {
+               mox.direction = mox.direction + Orientation.NUM_ORIENTATIONS;
+            }
+         }
+      }
+      return(result);
+   }
+
+
    // Main.
    public static void main(String[] args)
    {
@@ -565,6 +804,7 @@ public class MoxWorx
       int     width            = -1;
       int     height           = -1;
       int     driver           = Mox.DRIVER_TYPE.AUTOPILOT.getValue();
+      boolean gotDriver        = false;
       int     numMoxen         = -1;
       int     numObstacleTypes = -1;
       int     numObstacles     = -1;
@@ -572,6 +812,8 @@ public class MoxWorx
       int     randomSeed       = DEFAULT_RANDOM_SEED;
       String  loadfile         = null;
       String  savefile         = null;
+      String  pongTrainingFile = null;
+      String  pongTestingFile  = null;
       boolean dashboard        = false;
       boolean gotParm          = false;
 
@@ -683,6 +925,7 @@ public class MoxWorx
                System.err.println(MoxWorx.Usage);
                System.exit(1);
             }
+            gotDriver = true;
             continue;
          }
          if (args[i].equals("-numMoxen"))
@@ -1014,32 +1257,100 @@ public class MoxWorx
             }
             continue;
          }
+         if (args[i].equals("-pongTrainingFile"))
+         {
+            i++;
+            if (i >= args.length)
+            {
+               System.err.println("Invalid pongTrainingFile option");
+               System.err.println(MoxWorx.Usage);
+               System.exit(1);
+            }
+            if (pongTrainingFile == null)
+            {
+               pongTrainingFile = args[i];
+            }
+            else
+            {
+               System.err.println("Duplicate pongTrainingFile option");
+               System.err.println(MoxWorx.Usage);
+               System.exit(1);
+            }
+            continue;
+         }
+         if (args[i].equals("-pongTestingFile"))
+         {
+            i++;
+            if (i >= args.length)
+            {
+               System.err.println("Invalid pongTestingFile option");
+               System.err.println(MoxWorx.Usage);
+               System.exit(1);
+            }
+            if (pongTestingFile == null)
+            {
+               pongTestingFile = args[i];
+            }
+            else
+            {
+               System.err.println("Duplicate pongTestingFile option");
+               System.err.println(MoxWorx.Usage);
+               System.exit(1);
+            }
+            continue;
+         }
          System.err.println(MoxWorx.Usage);
          System.exit(1);
       }
 
       // Check options.
-      if (((steps < 0) && !dashboard) || ((steps >= 0) && dashboard))
+      if ((pongTrainingFile == null) && (pongTestingFile == null))
       {
-         System.err.println(MoxWorx.Usage);
-         System.exit(1);
-      }
-      if (loadfile == null)
-      {
-         if ((width == -1) || (height == -1))
+         if (((steps < 0) && !dashboard) || ((steps >= 0) && dashboard))
          {
             System.err.println(MoxWorx.Usage);
             System.exit(1);
          }
-         if (numMoxen == -1) { numMoxen = 0; }
-         if (numObstacleTypes == -1) { numObstacleTypes = 1; }
-         if (numObstacles == -1) { numObstacles = 0; }
-         if (numFoods == -1) { numFoods = 0; }
+         if (loadfile == null)
+         {
+            if ((width == -1) || (height == -1))
+            {
+               System.err.println(MoxWorx.Usage);
+               System.exit(1);
+            }
+            if (numMoxen == -1) { numMoxen = 0; }
+            if (numObstacleTypes == -1) { numObstacleTypes = 1; }
+            if (numObstacles == -1) { numObstacles = 0; }
+            if (numFoods == -1) { numFoods = 0; }
+         }
+         else
+         {
+            if ((numMoxen != -1) || (numObstacleTypes != -1) || (numObstacles != -1) ||
+                (numFoods != -1) || (width != -1) || (height != -1) || gotParm)
+            {
+               System.err.println(MoxWorx.Usage);
+               System.exit(1);
+            }
+         }
       }
       else
       {
-         if ((numMoxen != -1) || (numObstacleTypes != -1) || (numObstacles != -1) ||
-             (numFoods != -1) || (width != -1) || (height != -1) || gotParm)
+         if ((pongTrainingFile == null) || (pongTestingFile == null))
+         {
+            System.err.println(MoxWorx.Usage);
+            System.exit(1);
+         }
+         if ((steps >= 0) || dashboard || (width >= 0) || gotDriver)
+         {
+            System.err.println(MoxWorx.Usage);
+            System.exit(1);
+         }
+         if ((numMoxen >= 0) || (numObstacles >= 0) || (numFoods >= 0))
+         {
+            System.err.println(MoxWorx.Usage);
+            System.exit(1);
+         }
+         if ((savefile != null) || (loadfile != null))
          {
             System.err.println(MoxWorx.Usage);
             System.exit(1);
@@ -1058,69 +1369,86 @@ public class MoxWorx
       // Create world.
       MoxWorx MoxWorx = new MoxWorx();
       MoxWorx.random = new Random(randomSeed);
-      if (loadfile != null)
+      if (pongTrainingFile == null)
       {
-         try
+         if (loadfile != null)
          {
-            MoxWorx.load(loadfile);
+            try
+            {
+               MoxWorx.load(loadfile);
+            }
+            catch (Exception e)
+            {
+               System.err.println("Cannot load from file " + loadfile + ": " + e.getMessage());
+               System.exit(1);
+            }
          }
-         catch (Exception e)
+         else
          {
-            System.err.println("Cannot load from file " + loadfile + ": " + e.getMessage());
-            System.exit(1);
+            try
+            {
+               MoxWorx.initCells(width, height, numObstacleTypes, numObstacles, numFoods);
+               MoxWorx.createMoxen(numMoxen, numObstacleTypes + 1);
+            }
+            catch (Exception e)
+            {
+               System.err.println("Cannot initialize: " + e.getMessage());
+               System.exit(1);
+            }
+         }
+
+         // Create dashboard?
+         if (dashboard)
+         {
+            MoxWorx.createDashboard();
+         }
+
+         // Set mox driver.
+         for (Mox mox : MoxWorx.moxen)
+         {
+            mox.driver = driver;
+            if (driver == Mox.DRIVER_TYPE.METAMORPH_NN.getValue())
+            {
+               try
+               {
+                  System.out.println("Training metamorph NN...");
+                  mox.createMetamorphNN();
+               }
+               catch (Exception e)
+               {
+                  System.err.println("Cannot train metamorph NN: " + e.getMessage());
+               }
+            }
+         }
+
+         // Run.
+         MoxWorx.run(steps);
+
+         // Save?
+         if (savefile != null)
+         {
+            try
+            {
+               MoxWorx.save(savefile);
+            }
+            catch (Exception e)
+            {
+               System.err.println("Cannot save to file " + savefile + ": " + e.getMessage());
+            }
          }
       }
       else
       {
+         // Run pong.
          try
          {
-            MoxWorx.initCells(width, height, numObstacleTypes, numObstacles, numFoods);
-            MoxWorx.createMoxen(numMoxen, numObstacleTypes + 1);
+            MoxWorx.loadPong(pongTrainingFile, pongTestingFile);
+            MoxWorx.runPong();
          }
          catch (Exception e)
          {
-            System.err.println("Cannot initialize: " + e.getMessage());
+            System.err.println("Cannot run pong: " + e.getMessage());
             System.exit(1);
-         }
-      }
-
-      // Create dashboard?
-      if (dashboard)
-      {
-         MoxWorx.createDashboard();
-      }
-
-      // Set mox driver.
-      for (Mox mox : MoxWorx.moxen)
-      {
-         mox.driver = driver;
-         if (driver == Mox.DRIVER_TYPE.METAMORPH_NN.getValue())
-         {
-            try
-            {
-               System.out.println("Training metamorph NN...");
-               mox.createMetamorphNN();
-            }
-            catch (Exception e)
-            {
-               System.err.println("Cannot train metamorph NN: " + e.getMessage());
-            }
-         }
-      }
-
-      // Run.
-      MoxWorx.run(steps);
-
-      // Save?
-      if (savefile != null)
-      {
-         try
-         {
-            MoxWorx.save(savefile);
-         }
-         catch (Exception e)
-         {
-            System.err.println("Cannot save to file " + savefile + ": " + e.getMessage());
          }
       }
       System.exit(0);
