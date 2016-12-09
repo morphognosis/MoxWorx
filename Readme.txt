@@ -1,4 +1,4 @@
-Morphognosis learning and control of Mox.
+Morphognosis learning and control of mox.
 
 A mox is an organism occupying a cell in a cellular automaton. A mox has an orientation
 and can sense landmarks in front of it. It also has a sense for the proximity of food.

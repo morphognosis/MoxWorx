@@ -63,6 +63,27 @@ public class MoxCells
    }
 
 
+   // Food exists?
+   public boolean foodExists()
+   {
+      int x, y;
+      int w = size.width;
+      int h = size.height;
+
+      for (x = 0; x < w; x++)
+      {
+         for (y = 0; y < h; y++)
+         {
+            if (cells[x][y] == FOOD_CELL_VALUE)
+            {
+               return(true);
+            }
+         }
+      }
+      return(false);
+   }
+
+
    // Distance to nearest food.
    int foodDist(int x, int y)
    {
@@ -75,7 +96,7 @@ public class MoxCells
       {
          for (y2 = 0; y2 < h; y2++)
          {
-            if (cells[x2][y2] == MoxCells.FOOD_CELL_VALUE)
+            if (cells[x2][y2] == FOOD_CELL_VALUE)
             {
                d2 = cellDist(x, y, x2, y2);
                if ((d == -1) || (d2 < d))

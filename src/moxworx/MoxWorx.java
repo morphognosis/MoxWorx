@@ -39,7 +39,7 @@ public class MoxWorx
       "Usage:\n" +
       "  New run:\n" +
       "    java MoxWorx\n" +
-      "      -steps <steps> | -dashboard\n" +
+      "      -steps <steps> (stops when food consumed) | -dashboard\n" +
       "      -dimensions <width> <height>\n" +
       "     [-driver <metamorphDB | metamorphNN | autopilot> (mox driver: default=autopilot)]\n" +
       "     [-numMoxen <quantity> (default=0)]\n" +
@@ -56,7 +56,7 @@ public class MoxWorx
       "     [-save <file name>]\n" +
       "  Resume run:\n" +
       "    java MoxWorx\n" +
-      "      -steps <steps> | -dashboard\n" +
+      "      -steps <steps> (stops when food consumed) | -dashboard\n" +
       "      -load <file name>\n" +
       "     [-driver <metamorphDB | metamorphNN | autopilot> (default=autopilot)]\n" +
       "     [-randomSeed <random number seed>]\n" +
@@ -71,7 +71,11 @@ public class MoxWorx
       "     [-neighborhoodDimensionMultiplier <quantity> (default=" + Morphognostic.NEIGHBORHOOD_DIMENSION_MULTIPLIER + ")]\n" +
       "     [-epochIntervalStride <quantity> (default=" + Morphognostic.EPOCH_INTERVAL_STRIDE + ")]\n" +
       "     [-epochIntervalMultiplier <quantity> (default=" + Morphognostic.EPOCH_INTERVAL_MULTIPLIER + ")]\n" +
-      "     [-randomSeed <random number seed>]\n";
+      "     [-randomSeed <random number seed>]\n" +
+      "Exit codes:\n" +
+      "  0=success\n" +
+      "  1=fail\n" +
+      "  2=error\n";
 
    // Default random seed.
    public static final int DEFAULT_RANDOM_SEED = 4517;
@@ -353,22 +357,28 @@ public class MoxWorx
 
 
    // Run.
-   public void run(int steps)
+   // Return true if food not consumed, else false.
+   public boolean run(int steps)
    {
       if (steps >= 0)
       {
-         for (int i = 0; i < steps; i++)
+         for (int i = 0; i < steps && moxCells.foodExists(); i++)
          {
             stepMoxen();
          }
       }
       else
       {
-         for (int i = 0; updateDashboard(i); i++)
+         for (int i = 0; updateDashboard(i); )
          {
-            stepMoxen();
+            if (moxCells.foodExists())
+            {
+               stepMoxen();
+               i++;
+            }
          }
       }
+      return(moxCells.foodExists());
    }
 
 
@@ -649,7 +659,7 @@ public class MoxWorx
       if (d != pongDimensions)
       {
          System.err.println("Training and testing dimensions mismatch");
-         System.exit(1);
+         System.exit(2);
       }
    }
 
@@ -797,6 +807,10 @@ public class MoxWorx
 
 
    // Main.
+   // Exit codes:
+   // 0=success
+   // 1=fail
+   // 2=error
    public static void main(String[] args)
    {
       // Get options.
@@ -826,7 +840,7 @@ public class MoxWorx
             {
                System.err.println("Invalid steps option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             try
             {
@@ -835,13 +849,13 @@ public class MoxWorx
             catch (NumberFormatException e) {
                System.err.println("Invalid steps option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (steps < 0)
             {
                System.err.println("Invalid steps option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             continue;
          }
@@ -857,7 +871,7 @@ public class MoxWorx
             {
                System.err.println("Invalid dimensions option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             try
             {
@@ -866,20 +880,20 @@ public class MoxWorx
             catch (NumberFormatException e) {
                System.err.println("Invalid width option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (width < 2)
             {
                System.err.println("Invalid width option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             i++;
             if (i >= args.length)
             {
                System.err.println("Invalid dimensions option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             try
             {
@@ -888,13 +902,13 @@ public class MoxWorx
             catch (NumberFormatException e) {
                System.err.println("Invalid height option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (height < 2)
             {
                System.err.println("Invalid height option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             continue;
          }
@@ -905,7 +919,7 @@ public class MoxWorx
             {
                System.err.println("Invalid driver option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (args[i].equals("metamorphDB"))
             {
@@ -923,7 +937,7 @@ public class MoxWorx
             {
                System.err.println("Invalid driver option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             gotDriver = true;
             continue;
@@ -935,7 +949,7 @@ public class MoxWorx
             {
                System.err.println("Invalid numMoxen option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             try
             {
@@ -944,13 +958,13 @@ public class MoxWorx
             catch (NumberFormatException e) {
                System.err.println("Invalid numMoxen option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (numMoxen < 0)
             {
                System.err.println("Invalid numMoxen option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             continue;
          }
@@ -961,7 +975,7 @@ public class MoxWorx
             {
                System.err.println("Invalid numObstacleTypes option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             try
             {
@@ -970,13 +984,13 @@ public class MoxWorx
             catch (NumberFormatException e) {
                System.err.println("Invalid numObstacleTypes option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (numObstacleTypes < 1)
             {
                System.err.println("Invalid numObstacleTypes option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             continue;
          }
@@ -987,7 +1001,7 @@ public class MoxWorx
             {
                System.err.println("Invalid numObstacles option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             try
             {
@@ -996,13 +1010,13 @@ public class MoxWorx
             catch (NumberFormatException e) {
                System.err.println("Invalid numObstacles option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (numObstacles < 0)
             {
                System.err.println("Invalid numObstacles option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             continue;
          }
@@ -1013,7 +1027,7 @@ public class MoxWorx
             {
                System.err.println("Invalid numFoods option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             try
             {
@@ -1022,13 +1036,13 @@ public class MoxWorx
             catch (NumberFormatException e) {
                System.err.println("Invalid numFoods option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (numFoods < 0)
             {
                System.err.println("Invalid numFoods option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             continue;
          }
@@ -1039,7 +1053,7 @@ public class MoxWorx
             {
                System.err.println("Invalid numNeighborhoods option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             try
             {
@@ -1048,13 +1062,13 @@ public class MoxWorx
             catch (NumberFormatException e) {
                System.err.println("Invalid numNeighborhoods option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (Morphognostic.NUM_NEIGHBORHOODS < 0)
             {
                System.err.println("Invalid numNeighborhoods option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             gotParm = true;
             continue;
@@ -1066,7 +1080,7 @@ public class MoxWorx
             {
                System.err.println("Invalid neighborhoodInitialDimension option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             try
             {
@@ -1075,14 +1089,14 @@ public class MoxWorx
             catch (NumberFormatException e) {
                System.err.println("Invalid neighborhoodInitialDimension option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if ((Morphognostic.NEIGHBORHOOD_INITIAL_DIMENSION < 3) ||
                 ((Morphognostic.NEIGHBORHOOD_INITIAL_DIMENSION % 2) == 0))
             {
                System.err.println("Invalid neighborhoodInitialDimension option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             gotParm = true;
             continue;
@@ -1094,7 +1108,7 @@ public class MoxWorx
             {
                System.err.println("Invalid neighborhoodDimensionStride option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             try
             {
@@ -1103,13 +1117,13 @@ public class MoxWorx
             catch (NumberFormatException e) {
                System.err.println("Invalid neighborhoodDimensionStride option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (Morphognostic.NEIGHBORHOOD_DIMENSION_STRIDE < 0)
             {
                System.err.println("Invalid neighborhoodDimensionStride option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             gotParm = true;
             continue;
@@ -1121,7 +1135,7 @@ public class MoxWorx
             {
                System.err.println("Invalid neighborhoodDimensionMultiplier option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             try
             {
@@ -1130,13 +1144,13 @@ public class MoxWorx
             catch (NumberFormatException e) {
                System.err.println("Invalid neighborhoodDimensionMultiplier option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (Morphognostic.NEIGHBORHOOD_DIMENSION_MULTIPLIER < 0)
             {
                System.err.println("Invalid neighborhoodDimensionMultiplier option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             gotParm = true;
             continue;
@@ -1148,7 +1162,7 @@ public class MoxWorx
             {
                System.err.println("Invalid epochIntervalStride option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             try
             {
@@ -1157,13 +1171,13 @@ public class MoxWorx
             catch (NumberFormatException e) {
                System.err.println("Invalid epochIntervalStride option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (Morphognostic.EPOCH_INTERVAL_STRIDE < 0)
             {
                System.err.println("Invalid epochIntervalStride option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             gotParm = true;
             continue;
@@ -1175,7 +1189,7 @@ public class MoxWorx
             {
                System.err.println("Invalid epochIntervalMultiplier option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             try
             {
@@ -1184,13 +1198,13 @@ public class MoxWorx
             catch (NumberFormatException e) {
                System.err.println("Invalid epochIntervalMultiplier option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (Morphognostic.EPOCH_INTERVAL_MULTIPLIER < 0)
             {
                System.err.println("Invalid epochIntervalMultiplier option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             gotParm = true;
             continue;
@@ -1202,7 +1216,7 @@ public class MoxWorx
             {
                System.err.println("Invalid randomSeed option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             try
             {
@@ -1211,7 +1225,7 @@ public class MoxWorx
             catch (NumberFormatException e) {
                System.err.println("Invalid randomSeed option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             continue;
          }
@@ -1222,7 +1236,7 @@ public class MoxWorx
             {
                System.err.println("Invalid load option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (loadfile == null)
             {
@@ -1232,7 +1246,7 @@ public class MoxWorx
             {
                System.err.println("Duplicate load option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             continue;
          }
@@ -1243,7 +1257,7 @@ public class MoxWorx
             {
                System.err.println("Invalid save option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (savefile == null)
             {
@@ -1253,7 +1267,7 @@ public class MoxWorx
             {
                System.err.println("Duplicate save option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             continue;
          }
@@ -1264,7 +1278,7 @@ public class MoxWorx
             {
                System.err.println("Invalid pongTrainingFile option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (pongTrainingFile == null)
             {
@@ -1274,7 +1288,7 @@ public class MoxWorx
             {
                System.err.println("Duplicate pongTrainingFile option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             continue;
          }
@@ -1285,7 +1299,7 @@ public class MoxWorx
             {
                System.err.println("Invalid pongTestingFile option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (pongTestingFile == null)
             {
@@ -1295,12 +1309,12 @@ public class MoxWorx
             {
                System.err.println("Duplicate pongTestingFile option");
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             continue;
          }
          System.err.println(MoxWorx.Usage);
-         System.exit(1);
+         System.exit(2);
       }
 
       // Check options.
@@ -1309,14 +1323,23 @@ public class MoxWorx
          if (((steps < 0) && !dashboard) || ((steps >= 0) && dashboard))
          {
             System.err.println(MoxWorx.Usage);
-            System.exit(1);
+            System.exit(2);
+         }
+         if (!dashboard)
+         {
+            if (driver == Mox.DRIVER_TYPE.MANUAL.getValue())
+            {
+               System.err.println("Cannot run manually without dashboard");
+               System.err.println(MoxWorx.Usage);
+               System.exit(2);
+            }
          }
          if (loadfile == null)
          {
             if ((width == -1) || (height == -1))
             {
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
             if (numMoxen == -1) { numMoxen = 0; }
             if (numObstacleTypes == -1) { numObstacleTypes = 1; }
@@ -1329,7 +1352,7 @@ public class MoxWorx
                 (numFoods != -1) || (width != -1) || (height != -1) || gotParm)
             {
                System.err.println(MoxWorx.Usage);
-               System.exit(1);
+               System.exit(2);
             }
          }
       }
@@ -1338,22 +1361,22 @@ public class MoxWorx
          if ((pongTrainingFile == null) || (pongTestingFile == null))
          {
             System.err.println(MoxWorx.Usage);
-            System.exit(1);
+            System.exit(2);
          }
          if ((steps >= 0) || dashboard || (width >= 0) || gotDriver)
          {
             System.err.println(MoxWorx.Usage);
-            System.exit(1);
+            System.exit(2);
          }
          if ((numMoxen >= 0) || (numObstacles >= 0) || (numFoods >= 0))
          {
             System.err.println(MoxWorx.Usage);
-            System.exit(1);
+            System.exit(2);
          }
          if ((savefile != null) || (loadfile != null))
          {
             System.err.println(MoxWorx.Usage);
-            System.exit(1);
+            System.exit(2);
          }
       }
 
@@ -1380,7 +1403,7 @@ public class MoxWorx
             catch (Exception e)
             {
                System.err.println("Cannot load from file " + loadfile + ": " + e.getMessage());
-               System.exit(1);
+               System.exit(2);
             }
          }
          else
@@ -1393,7 +1416,7 @@ public class MoxWorx
             catch (Exception e)
             {
                System.err.println("Cannot initialize: " + e.getMessage());
-               System.exit(1);
+               System.exit(2);
             }
          }
 
@@ -1422,7 +1445,7 @@ public class MoxWorx
          }
 
          // Run.
-         MoxWorx.run(steps);
+         boolean foodExists = MoxWorx.run(steps);
 
          // Save?
          if (savefile != null)
@@ -1436,6 +1459,14 @@ public class MoxWorx
                System.err.println("Cannot save to file " + savefile + ": " + e.getMessage());
             }
          }
+         if (foodExists)
+         {
+            System.exit(1);
+         }
+         else
+         {
+            System.exit(0);
+         }
       }
       else
       {
@@ -1448,7 +1479,7 @@ public class MoxWorx
          catch (Exception e)
          {
             System.err.println("Cannot run pong: " + e.getMessage());
-            System.exit(1);
+            System.exit(2);
          }
       }
       System.exit(0);
