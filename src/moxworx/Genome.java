@@ -13,17 +13,17 @@ public class Genome
    Vector<Gene> genes;
 
    // Mutation rate.
-   double mutationRate;
+   float mutationRate;
 
    // Probability of random mutation.
-   double randomMutationRate;
+   float randomMutationRate;
 
    // Random numbers.
    int    randomSeed;
    Random randomizer;
 
    // Constructor.
-   Genome(double mutationRate, double randomMutationRate, int randomSeed)
+   Genome(float mutationRate, float randomMutationRate, int randomSeed)
    {
       this.mutationRate       = mutationRate;
       this.randomMutationRate = randomMutationRate;

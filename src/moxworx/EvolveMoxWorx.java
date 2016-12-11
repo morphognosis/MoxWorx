@@ -7,43 +7,113 @@ package moxworx;
 import java.util.*;
 import java.io.*;
 
-public class EvolveMoxen
+public class EvolveMoxWorx
 {
+   // Parameters.
+   public static final int   DEFAULT_WIDTH                = 10;
+   public int                WIDTH                        = DEFAULT_WIDTH;
+   public static final int   DEFAULT_HEIGHT               = 10;
+   public int                HEIGHT                       = DEFAULT_HEIGHT;
+   public static final int   DEFAULT_NUM_OBSTACLE_TYPES   = 1;
+   public int                NUM_OBSTACLE_TYPES           = DEFAULT_NUM_OBSTACLE_TYPES;
+   public static final int   DEFAULT_NUM_OBSTACLES        = 0;
+   public int                NUM_OBSTACLES                = DEFAULT_NUM_OBSTACLES;
+   public static final int   DEFAULT_NUM_FOODS            = 0;
+   public int                NUM_FOODS                    = DEFAULT_NUM_FOODS;
+   public static final int   DEFAULT_FIT_POPULATION_SIZE  = 20;
+   public int                FIT_POPULATION_SIZE          = DEFAULT_FIT_POPULATION_SIZE;
+   public static final int   DEFAULT_NUM_MUTANTS          = 10;
+   public int                NUM_MUTANTS                  = DEFAULT_NUM_MUTANTS;
+   public static final int   DEFAULT_NUM_OFFSPRING        = 10;
+   public int                NUM_OFFSPRING                = DEFAULT_NUM_OFFSPRING;
+   public int                POPULATION_SIZE              = (FIT_POPULATION_SIZE + NUM_MUTANTS + NUM_OFFSPRING);
+   public static final float DEFAULT_MUTATION_RATE        = 0.25f;
+   public float              MUTATION_RATE                = DEFAULT_MUTATION_RATE;
+   public static final float DEFAULT_RANDOM_MUTATION_RATE = 0.5f;
+   public float              RANDOM_MUTATION_RATE         = DEFAULT_RANDOM_MUTATION_RATE;
+   public static final int   DEFAULT_RANDOM_SEED          = 4517;
+   public int                RANDOM_SEED                  = DEFAULT_RANDOM_SEED;
+   public static final int   SAVE_FREQUENCY               = 1;
+   public static final float INVALID_FITNESS              = 1000.0f;
+
+   public void setPopulationSize()
+   {
+      POPULATION_SIZE = (FIT_POPULATION_SIZE + NUM_MUTANTS + NUM_OFFSPRING);
+   }
+
+
+   // Load parameters.
+   public void loadParameters(DataInputStream reader) throws IOException
+   {
+      WIDTH                = Utility.loadInt(reader);
+      HEIGHT               = Utility.loadInt(reader);
+      NUM_OBSTACLE_TYPES   = Utility.loadInt(reader);
+      NUM_OBSTACLES        = Utility.loadInt(reader);
+      NUM_FOODS            = Utility.loadInt(reader);
+      FIT_POPULATION_SIZE  = Utility.loadInt(reader);
+      NUM_MUTANTS          = Utility.loadInt(reader);
+      NUM_OFFSPRING        = Utility.loadInt(reader);
+      MUTATION_RATE        = Utility.loadFloat(reader);
+      RANDOM_MUTATION_RATE = Utility.loadFloat(reader);
+      setPopulationSize();
+   }
+
+
+   // Save parameters.
+   public void saveParameters(PrintWriter writer) throws IOException
+   {
+      Utility.saveInt(writer, WIDTH);
+      Utility.saveInt(writer, HEIGHT);
+      Utility.saveInt(writer, NUM_OBSTACLE_TYPES);
+      Utility.saveInt(writer, NUM_OBSTACLES);
+      Utility.saveInt(writer, NUM_FOODS);
+      Utility.saveInt(writer, FIT_POPULATION_SIZE);
+      Utility.saveInt(writer, NUM_MUTANTS);
+      Utility.saveInt(writer, NUM_OFFSPRING);
+      Utility.saveFloat(writer, MUTATION_RATE);
+      Utility.saveFloat(writer, RANDOM_MUTATION_RATE);
+   }
+
+
    // Usage.
    public static final String Usage =
       "Usage:\n" +
       "  New run:\n" +
-      "    java EvolveMoxen\n" +
+      "    java EvolveMoxWorx\n" +
       "      -generations <evolution generations>\n" +
       "      -steps <moxen steps>\n" +
       "      -output <evolution output file name>\n" +
-      "     [-dimensions <width> <height> (default=" + EvolveCommon.DEFAULT_WIDTH + "," + EvolveCommon.DEFAULT_HEIGHT + ")]\n" +
-      "     [-numObstacleTypes <quantity> (default=" + EvolveCommon.DEFAULT_NUM_OBSTACLE_TYPES + ")]\n" +
-      "     [-numObstacles <quantity> (default=" + EvolveCommon.DEFAULT_NUM_OBSTACLES + ")]\n" +
-      "     [-numFoods <quantity> (default=" + EvolveCommon.DEFAULT_NUM_FOODS + ")]\n" +
-      "     [-fitPopulationSize <fit population size> (default=" + EvolveCommon.DEFAULT_FIT_POPULATION_SIZE + ")]\n" +
-      "     [-numMutants <number of mutants> (default=" + EvolveCommon.DEFAULT_NUM_MUTANTS + ")]\n" +
-      "     [-numOffspring <number of offspring> (default=" + EvolveCommon.DEFAULT_NUM_OFFSPRING + ")]\n" +
-      "     [-mutationRate <mutation rate> (default=" + EvolveCommon.DEFAULT_MUTATION_RATE + ")]\n" +
-      "     [-randomMutationRate <random mutation rate> (default=" + EvolveCommon.DEFAULT_RANDOM_MUTATION_RATE + ")]\n" +
-      "     [-randomSeed <random seed> (default=" + EvolveCommon.DEFAULT_RANDOM_SEED + ")]\n" +
+      "     [-dimensions <width> <height> (default=" + DEFAULT_WIDTH + "," + DEFAULT_HEIGHT + ")]\n" +
+      "     [-numObstacleTypes <quantity> (default=" + DEFAULT_NUM_OBSTACLE_TYPES + ")]\n" +
+      "     [-numObstacles <quantity> (default=" + DEFAULT_NUM_OBSTACLES + ")]\n" +
+      "     [-numFoods <quantity> (default=" + DEFAULT_NUM_FOODS + ")]\n" +
+      "     [-fitPopulationSize <fit population size> (default=" + DEFAULT_FIT_POPULATION_SIZE + ")]\n" +
+      "     [-numMutants <number of mutants> (default=" + DEFAULT_NUM_MUTANTS + ")]\n" +
+      "     [-numOffspring <number of offspring> (default=" + DEFAULT_NUM_OFFSPRING + ")]\n" +
+      "     [-mutationRate <mutation rate> (default=" + DEFAULT_MUTATION_RATE + ")]\n" +
+      "     [-randomMutationRate <random mutation rate> (default=" + DEFAULT_RANDOM_MUTATION_RATE + ")]\n" +
+      "     [-randomSeed <random seed> (default=" + DEFAULT_RANDOM_SEED + ")]\n" +
       "     [-logfile <log file name>]\n" +
       "  Resume run:\n" +
-      "    java EvolveMoxen\n" +
+      "    java EvolveMoxWorx\n" +
       "      -generations <evolution generations>\n" +
       "      -steps <moxen steps>\n" +
       "      -input <evolution input file name>\n" +
       "      -output <evolution output file name>\n" +
-      "     [-mutationRate <mutation rate> (default=" + EvolveCommon.DEFAULT_MUTATION_RATE + ")]\n" +
-      "     [-randomMutationRate <random mutation rate> (default=" + EvolveCommon.DEFAULT_RANDOM_MUTATION_RATE + ")]\n" +
-      "     [-randomSeed <random seed> (default=" + EvolveCommon.DEFAULT_RANDOM_SEED + ")]\n" +
+      "     [-dimensions <width> <height>]\n" +
+      "     [-numObstacleTypes <quantity>]\n" +
+      "     [-numObstacles <quantity>]\n" +
+      "     [-numFoods <quantity>]\n" +
+      "     [-mutationRate <mutation rate>]\n" +
+      "     [-randomMutationRate <random mutation rate>]\n" +
+      "     [-randomSeed <random seed> (default=" + DEFAULT_RANDOM_SEED + ")]\n" +
       "     [-logfile <log file name>]\n" +
       "  Print population properties:\n" +
-      "    java EvolveMoxen\n" +
+      "    java EvolveMoxWorx\n" +
       "      -properties\n" +
       "      -input <evolution input file name>\n" +
       "  Print evolution statistics:\n" +
-      "    java EvolveMoxen\n" +
+      "    java EvolveMoxWorx\n" +
       "      -statistics\n" +
       "      -input <evolution input file name>";
 
@@ -70,14 +140,14 @@ public class EvolveMoxen
    boolean PrintStatistics;
 
    // Evolution statistics.
-   double[] Fittest;
-   double[] Average;
+   float[] Fittest;
+   float[] Average;
 
    // Population.
-   EvolveCommon.Member[] Population;
+   Member[] Population;
 
    // Constructor.
-   public EvolveMoxen(String[] args)
+   public EvolveMoxWorx(String[] args)
    {
       int i;
 
@@ -171,14 +241,14 @@ public class EvolveMoxen
             }
             try
             {
-               EvolveCommon.WIDTH = Integer.parseInt(args[i]);
+               WIDTH = Integer.parseInt(args[i]);
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid width option");
                System.err.println(MoxWorx.Usage);
                System.exit(2);
             }
-            if (EvolveCommon.WIDTH < 2)
+            if (WIDTH < 2)
             {
                System.err.println("Invalid width option");
                System.err.println(MoxWorx.Usage);
@@ -193,14 +263,14 @@ public class EvolveMoxen
             }
             try
             {
-               EvolveCommon.HEIGHT = Integer.parseInt(args[i]);
+               HEIGHT = Integer.parseInt(args[i]);
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid height option");
                System.err.println(MoxWorx.Usage);
                System.exit(2);
             }
-            if (EvolveCommon.HEIGHT < 2)
+            if (HEIGHT < 2)
             {
                System.err.println("Invalid height option");
                System.err.println(MoxWorx.Usage);
@@ -218,8 +288,8 @@ public class EvolveMoxen
                System.err.println(Usage);
                System.exit(1);
             }
-            EvolveCommon.NUM_OBSTACLE_TYPES = Integer.parseInt(args[i]);
-            if (EvolveCommon.NUM_OBSTACLE_TYPES < 1)
+            NUM_OBSTACLE_TYPES = Integer.parseInt(args[i]);
+            if (NUM_OBSTACLE_TYPES < 1)
             {
                System.err.println(Usage);
                System.exit(1);
@@ -236,8 +306,8 @@ public class EvolveMoxen
                System.err.println(Usage);
                System.exit(1);
             }
-            EvolveCommon.NUM_OBSTACLES = Integer.parseInt(args[i]);
-            if (EvolveCommon.NUM_OBSTACLES < 0)
+            NUM_OBSTACLES = Integer.parseInt(args[i]);
+            if (NUM_OBSTACLES < 0)
             {
                System.err.println(Usage);
                System.exit(1);
@@ -254,8 +324,8 @@ public class EvolveMoxen
                System.err.println(Usage);
                System.exit(1);
             }
-            EvolveCommon.NUM_FOODS = Integer.parseInt(args[i]);
-            if (EvolveCommon.NUM_FOODS < 0)
+            NUM_FOODS = Integer.parseInt(args[i]);
+            if (NUM_FOODS < 0)
             {
                System.err.println(Usage);
                System.exit(1);
@@ -272,13 +342,13 @@ public class EvolveMoxen
                System.err.println(Usage);
                System.exit(1);
             }
-            EvolveCommon.FIT_POPULATION_SIZE = Integer.parseInt(args[i]);
-            if (EvolveCommon.FIT_POPULATION_SIZE < 0)
+            FIT_POPULATION_SIZE = Integer.parseInt(args[i]);
+            if (FIT_POPULATION_SIZE < 0)
             {
                System.err.println(Usage);
                System.exit(1);
             }
-            EvolveCommon.setPopulationSize();
+            setPopulationSize();
             gotFitPopulationSize = true;
             continue;
          }
@@ -291,13 +361,13 @@ public class EvolveMoxen
                System.err.println(Usage);
                System.exit(1);
             }
-            EvolveCommon.NUM_MUTANTS = Integer.parseInt(args[i]);
-            if (EvolveCommon.NUM_MUTANTS < 0)
+            NUM_MUTANTS = Integer.parseInt(args[i]);
+            if (NUM_MUTANTS < 0)
             {
                System.err.println(Usage);
                System.exit(1);
             }
-            EvolveCommon.setPopulationSize();
+            setPopulationSize();
             gotNumMutants = true;
             continue;
          }
@@ -310,13 +380,13 @@ public class EvolveMoxen
                System.err.println(Usage);
                System.exit(1);
             }
-            EvolveCommon.NUM_OFFSPRING = Integer.parseInt(args[i]);
-            if (EvolveCommon.NUM_OFFSPRING < 0)
+            NUM_OFFSPRING = Integer.parseInt(args[i]);
+            if (NUM_OFFSPRING < 0)
             {
                System.err.println(Usage);
                System.exit(1);
             }
-            EvolveCommon.setPopulationSize();
+            setPopulationSize();
             gotNumOffspring = true;
             continue;
          }
@@ -329,8 +399,8 @@ public class EvolveMoxen
                System.err.println(Usage);
                System.exit(1);
             }
-            EvolveCommon.MUTATION_RATE = Double.parseDouble(args[i]);
-            if ((EvolveCommon.MUTATION_RATE < 0.0) || (EvolveCommon.MUTATION_RATE > 1.0))
+            MUTATION_RATE = Float.parseFloat(args[i]);
+            if ((MUTATION_RATE < 0.0f) || (MUTATION_RATE > 1.0f))
             {
                System.err.println(Usage);
                System.exit(1);
@@ -347,8 +417,8 @@ public class EvolveMoxen
                System.err.println(Usage);
                System.exit(1);
             }
-            EvolveCommon.RANDOM_MUTATION_RATE = Double.parseDouble(args[i]);
-            if ((EvolveCommon.RANDOM_MUTATION_RATE < 0.0) || (EvolveCommon.RANDOM_MUTATION_RATE > 1.0))
+            RANDOM_MUTATION_RATE = Float.parseFloat(args[i]);
+            if ((RANDOM_MUTATION_RATE < 0.0f) || (RANDOM_MUTATION_RATE > 1.0f))
             {
                System.err.println(Usage);
                System.exit(1);
@@ -365,8 +435,8 @@ public class EvolveMoxen
                System.err.println(Usage);
                System.exit(1);
             }
-            EvolveCommon.RANDOM_SEED = Integer.parseInt(args[i]);
-            gotRandomSeed            = true;
+            RANDOM_SEED   = Integer.parseInt(args[i]);
+            gotRandomSeed = true;
             continue;
          }
 
@@ -438,8 +508,7 @@ public class EvolveMoxen
 
          if (InputFileName != null)
          {
-            if (gotDimensions || gotNumObstacleTypes || gotNumObstacles || gotNumFoods ||
-                gotFitPopulationSize || gotNumMutants || gotNumOffspring)
+            if (gotFitPopulationSize || gotNumMutants || gotNumOffspring)
             {
                System.err.println(Usage);
                System.exit(1);
@@ -448,7 +517,7 @@ public class EvolveMoxen
       }
 
       // Seed random numbers.
-      Randomizer = new Random(EvolveCommon.RANDOM_SEED);
+      Randomizer = new Random(RANDOM_SEED);
 
       // Open log file?
       if (LogFileName != null)
@@ -466,8 +535,8 @@ public class EvolveMoxen
    }
 
 
-   // Start evolve.
-   public void start()
+   // Run evolve.
+   public void run()
    {
       // Initialize populations?
       if (InputFileName == null)
@@ -490,12 +559,12 @@ public class EvolveMoxen
          log("    input=" + InputFileName);
       }
       log("    output=" + OutputFileName);
-      log("    FIT_POPULATION_SIZE=" + EvolveCommon.FIT_POPULATION_SIZE);
-      log("    NUM_MUTANTS=" + EvolveCommon.NUM_MUTANTS);
-      log("    NUM_OFFSPRING=" + EvolveCommon.NUM_OFFSPRING);
-      log("    MUTATION_RATE=" + EvolveCommon.MUTATION_RATE);
-      log("    RANDOM_MUTATION_RATE=" + EvolveCommon.RANDOM_MUTATION_RATE);
-      log("    RANDOM_SEED=" + EvolveCommon.RANDOM_SEED);
+      log("    FIT_POPULATION_SIZE=" + FIT_POPULATION_SIZE);
+      log("    NUM_MUTANTS=" + NUM_MUTANTS);
+      log("    NUM_OFFSPRING=" + NUM_OFFSPRING);
+      log("    MUTATION_RATE=" + MUTATION_RATE);
+      log("    RANDOM_MUTATION_RATE=" + RANDOM_MUTATION_RATE);
+      log("    RANDOM_SEED=" + RANDOM_SEED);
 
       // Print population properties?
       if (PrintProperties)
@@ -520,7 +589,7 @@ public class EvolveMoxen
          evolve(Generation);
 
          // Save populations?
-         if ((Generation % EvolveCommon.SAVE_FREQUENCY) == 0)
+         if ((Generation % SAVE_FREQUENCY) == 0)
          {
             save(Generation);
          }
@@ -538,22 +607,23 @@ public class EvolveMoxen
    {
       int i;
 
-      Population = new EvolveCommon.Member[EvolveCommon.POPULATION_SIZE];
-      for (i = 0; i < EvolveCommon.POPULATION_SIZE; i++)
+      Population = new Member[POPULATION_SIZE];
+      for (i = 0; i < POPULATION_SIZE; i++)
       {
          if (i == 0)
          {
-            Population[i] =
-               new EvolveCommon.Member(0, Randomizer);
+            Population[i] = new Member(0, Randomizer);
+            Population[i].evaluate(Steps);
          }
          else
          {
             // Mutate parameters.
-            Population[i] = new EvolveCommon.Member(Population[0], 0, Randomizer);
+            Population[i] = new Member(Population[0], 0, Randomizer);
+            Population[i].evaluate(Steps);
          }
       }
-      Fittest = new double[Generations + 1];
-      Average = new double[Generations + 1];
+      Fittest = new float[Generations + 1];
+      Average = new float[Generations + 1];
    }
 
 
@@ -589,21 +659,21 @@ public class EvolveMoxen
       try
       {
          // Load parameters.
-         EvolveCommon.loadParameters(reader);
+         loadParameters(reader);
 
          // Load population.
-         Population = new EvolveCommon.Member[EvolveCommon.POPULATION_SIZE];
-         for (i = 0; i < EvolveCommon.POPULATION_SIZE; i++)
+         Population = new Member[POPULATION_SIZE];
+         for (i = 0; i < POPULATION_SIZE; i++)
          {
-            Population[i] = new EvolveCommon.Member(0, Randomizer);
+            Population[i] = new Member(0, Randomizer);
             Population[i].load(input);
          }
-         Fittest = new double[Generation + Generations + 1];
-         Average = new double[Generation + Generations + 1];
+         Fittest = new float[Generation + Generations + 1];
+         Average = new float[Generation + Generations + 1];
          for (i = 0; i < Generation; i++)
          {
-            Fittest[i] = Utility.loadDouble(reader);
-            Average[i] = Utility.loadDouble(reader);
+            Fittest[i] = Utility.loadFloat(reader);
+            Average[i] = Utility.loadFloat(reader);
          }
          input.close();
       }
@@ -647,17 +717,17 @@ public class EvolveMoxen
       try
       {
          // Save parameters.
-         EvolveCommon.saveParameters(writer);
+         saveParameters(writer);
 
          // Save population.
-         for (i = 0; i < EvolveCommon.POPULATION_SIZE; i++)
+         for (i = 0; i < POPULATION_SIZE; i++)
          {
             Population[i].save(output);
          }
          for (i = 0, n = generation + 1; i < n; i++)
          {
-            Utility.saveDouble(writer, Fittest[i]);
-            Utility.saveDouble(writer, Average[i]);
+            Utility.saveFloat(writer, Fittest[i]);
+            Utility.saveFloat(writer, Average[i]);
          }
          writer.flush();
          output.close();
@@ -673,8 +743,14 @@ public class EvolveMoxen
    // Evolution generation.
    void evolve(int generation)
    {
-      // Evaluate member fitness.
-      evaluate(generation);
+      String logEntry;
+
+      log("Population:");
+      for (int i = 0; i < POPULATION_SIZE; i++)
+      {
+         logEntry = "    member=" + i + ", " + Population[i].getInfo();
+         log(logEntry);
+      }
 
       // Prune unfit members.
       prune();
@@ -687,39 +763,21 @@ public class EvolveMoxen
    }
 
 
-   // Evaluate member fitness.
-   void evaluate(int generation)
-   {
-      EvolveCommon.Member member;
-      String              logEntry;
-
-      log("Evaluate:");
-      for (int i = 0; i < EvolveCommon.POPULATION_SIZE; i++)
-      {
-         member = Population[i];
-         member.evaluate(Steps);
-         logEntry = "    member=" + i + ", " + Population[i].getInfo();
-         log(logEntry);
-      }
-   }
-
-
    // Prune unfit members.
    void prune()
    {
-      double min, d;
-      int    i, j, m;
+      float min, f;
+      int   i, j, m;
 
-      EvolveCommon.Member member;
+      Member member;
 
       log("Select:");
-      EvolveCommon.Member[] fitPopulation =
-         new EvolveCommon.Member[EvolveCommon.FIT_POPULATION_SIZE];
-      min = EvolveCommon.INVALID_FITNESS;
-      for (i = 0; i < EvolveCommon.FIT_POPULATION_SIZE; i++)
+      Member[] fitPopulation = new Member[FIT_POPULATION_SIZE];
+      min = INVALID_FITNESS;
+      for (i = 0; i < FIT_POPULATION_SIZE; i++)
       {
          m = -1;
-         for (j = 0; j < EvolveCommon.POPULATION_SIZE; j++)
+         for (j = 0; j < POPULATION_SIZE; j++)
          {
             member = Population[j];
             if (member == null)
@@ -737,22 +795,22 @@ public class EvolveMoxen
          fitPopulation[i] = member;
          log("    " + member.getInfo());
       }
-      for (i = 0; i < EvolveCommon.POPULATION_SIZE; i++)
+      for (i = 0; i < POPULATION_SIZE; i++)
       {
          if (Population[i] != null)
          {
             Population[i] = null;
          }
       }
-      d = 0.0;
-      for (i = 0; i < EvolveCommon.FIT_POPULATION_SIZE; i++)
+      f = 0.0f;
+      for (i = 0; i < FIT_POPULATION_SIZE; i++)
       {
          Population[i]    = fitPopulation[i];
          fitPopulation[i] = null;
-         d += Population[i].fitness;
+         f += Population[i].fitness;
       }
       Fittest[Generation] = Population[0].fitness;
-      Average[Generation] = d / (double)EvolveCommon.FIT_POPULATION_SIZE;
+      Average[Generation] = f / (float)FIT_POPULATION_SIZE;
    }
 
 
@@ -761,20 +819,21 @@ public class EvolveMoxen
    {
       int i, j;
 
-      EvolveCommon.Member member, mutant;
+      Member member, mutant;
 
       log("Mutate:");
-      for (i = 0; i < EvolveCommon.NUM_MUTANTS; i++)
+      for (i = 0; i < NUM_MUTANTS; i++)
       {
          // Select a fit member to mutate.
-         j      = Randomizer.nextInt(EvolveCommon.FIT_POPULATION_SIZE);
+         j      = Randomizer.nextInt(FIT_POPULATION_SIZE);
          member = Population[j];
 
          // Create mutant member.
-         mutant = new EvolveCommon.Member(member, member.generation + 1, Randomizer);
-         Population[EvolveCommon.FIT_POPULATION_SIZE + i] = mutant;
+         mutant = new Member(member, member.generation + 1, Randomizer);
+         mutant.evaluate(Steps);
+         Population[FIT_POPULATION_SIZE + i] = mutant;
          log("    member=" + j + ", " + member.getInfo() +
-             " -> member=" + (EvolveCommon.FIT_POPULATION_SIZE + i) +
+             " -> member=" + (FIT_POPULATION_SIZE + i) +
              ", " + mutant.getInfo());
       }
    }
@@ -785,29 +844,29 @@ public class EvolveMoxen
    {
       int i, j, k;
 
-      EvolveCommon.Member member1, member2, offspring;
+      Member member1, member2, offspring;
 
       log("Mate:");
-      if (EvolveCommon.FIT_POPULATION_SIZE > 1)
+      if (FIT_POPULATION_SIZE > 1)
       {
-         for (i = 0; i < EvolveCommon.NUM_OFFSPRING; i++)
+         for (i = 0; i < NUM_OFFSPRING; i++)
          {
             // Select a pair of fit members to mate.
-            j       = Randomizer.nextInt(EvolveCommon.FIT_POPULATION_SIZE);
+            j       = Randomizer.nextInt(FIT_POPULATION_SIZE);
             member1 = Population[j];
-            while ((k = Randomizer.nextInt(EvolveCommon.FIT_POPULATION_SIZE)) == j) {}
+            while ((k = Randomizer.nextInt(FIT_POPULATION_SIZE)) == j) {}
             member2 = Population[k];
 
             // Create offspring.
-            offspring = new EvolveCommon.Member(member1, member2,
-                                                (member1.generation > member2.generation ?
-                                                 member1.generation : member2.generation) + 1, Randomizer);
-            Population[EvolveCommon.FIT_POPULATION_SIZE +
-                       EvolveCommon.NUM_MUTANTS + i] = offspring;
+            offspring = new Member(member1, member2,
+                                   (member1.generation > member2.generation ?
+                                    member1.generation : member2.generation) + 1, Randomizer);
+            offspring.evaluate(Steps);
+            Population[FIT_POPULATION_SIZE + NUM_MUTANTS + i] = offspring;
             log("    member=" + j + ", " + member1.getInfo() + " + member=" +
                 k + ", " + member2.getInfo() +
-                " -> member=" + (EvolveCommon.FIT_POPULATION_SIZE +
-                                 EvolveCommon.NUM_MUTANTS + i) +
+                " -> member=" + (FIT_POPULATION_SIZE +
+                                 NUM_MUTANTS + i) +
                 ", " + offspring.getInfo());
          }
       }
@@ -822,7 +881,7 @@ public class EvolveMoxen
       System.out.println("Population properties:");
 
       System.out.println("=============================");
-      for (i = 0; i < EvolveCommon.POPULATION_SIZE; i++)
+      for (i = 0; i < POPULATION_SIZE; i++)
       {
          System.out.println("-----------------------------");
          Population[i].printProperties();
@@ -861,12 +920,235 @@ public class EvolveMoxen
    }
 
 
+   // Mox parameter genome.
+   public class MoxParmGenome extends Genome
+   {
+      // Constructor.
+      public MoxParmGenome(Random randomizer)
+      {
+         super(MUTATION_RATE, RANDOM_MUTATION_RATE, randomizer.nextInt());
+
+         // NUM_NEIGHBORHOODS.
+         genes.add(
+            new Gene("NUM_NEIGHBORHOODS", 2, 1, 4, 1,
+                     MUTATION_RATE, RANDOM_MUTATION_RATE, randomizer.nextInt()));
+
+         // NEIGHBORHOOD_INITIAL_DIMENSION.
+         genes.add(
+            new Gene("NEIGHBORHOOD_INITIAL_DIMENSION", 3, 3, 5, 2,
+                     MUTATION_RATE, RANDOM_MUTATION_RATE, randomizer.nextInt()));
+
+         // NEIGHBORHOOD_DIMENSION_STRIDE.
+         genes.add(
+            new Gene("NEIGHBORHOOD_DIMENSION_STRIDE", 1, 0, 2, 1,
+                     MUTATION_RATE, RANDOM_MUTATION_RATE, randomizer.nextInt()));
+
+         // NEIGHBORHOOD_DIMENSION_MULTIPLIER.
+         genes.add(
+            new Gene("NEIGHBORHOOD_DIMENSION_MULTIPLIER", 3, 1, 3, 1,
+                     MUTATION_RATE, RANDOM_MUTATION_RATE, randomizer.nextInt()));
+
+         // EPOCH_INTERVAL_STRIDE.
+         genes.add(
+            new Gene("EPOCH_INTERVAL_STRIDE", 1, 1, 3, 1,
+                     MUTATION_RATE, RANDOM_MUTATION_RATE, randomizer.nextInt()));
+
+         // EPOCH_INTERVAL_MULTIPLIER.
+         genes.add(
+            new Gene("EPOCH_INTERVAL_MULTIPLIER", 3, 1, 3, 1,
+                     MUTATION_RATE, RANDOM_MUTATION_RATE, randomizer.nextInt()));
+      }
+
+
+      // Mutate.
+      public void mutate()
+      {
+         super.mutate();
+      }
+   }
+
+   // ID dispenser.
+   public int IDdispenser = 0;
+
+   // Population member.
+   public class Member
+   {
+      public int    id;
+      public int    generation;
+      public float  fitness;
+      public Random randomizer;
+
+      // Mox parameters.
+      public MoxParmGenome moxParmGenome;
+
+      // Constructors.
+      public Member(int generation, Random randomizer)
+      {
+         id = IDdispenser++;
+         this.generation = generation;
+         this.randomizer = randomizer;
+         fitness         = 0.0f;
+
+         // Create parameter genome.
+         moxParmGenome = new MoxParmGenome(randomizer);
+      }
+
+
+      // Construct mutation of given member.
+      public Member(Member member, int generation, Random randomizer)
+      {
+         id = IDdispenser++;
+         this.generation = generation;
+         this.randomizer = randomizer;
+         fitness         = 0.0f;
+
+         // Create and mutate parameter genome.
+         moxParmGenome = new MoxParmGenome(randomizer);
+         moxParmGenome.copyValues(member.moxParmGenome);
+         moxParmGenome.mutate();
+      }
+
+
+      // Construct by mating given members.
+      public Member(Member member1, Member member2, int generation, Random randomizer)
+      {
+         id = IDdispenser++;
+         this.generation = generation;
+         this.randomizer = randomizer;
+         fitness         = 0.0f;
+
+         // Create and meld parameter genome.
+         moxParmGenome = new MoxParmGenome(randomizer);
+         moxParmGenome.meldValues(member1.moxParmGenome, member2.moxParmGenome);
+      }
+
+
+      // Evaluate fitness.
+      public void evaluate(int steps)
+      {
+         fitness = INVALID_FITNESS;
+
+         // Get parameters.
+         Map<String, Object> parameters        = moxParmGenome.getKeyValues();
+         int                 NUM_NEIGHBORHOODS = (Integer)parameters.get("NUM_NEIGHBORHOODS");
+         int                 NEIGHBORHOOD_INITIAL_DIMENSION    = (Integer)parameters.get("NEIGHBORHOOD_INITIAL_DIMENSION");
+         int                 NEIGHBORHOOD_DIMENSION_STRIDE     = (Integer)parameters.get("NEIGHBORHOOD_DIMENSION_STRIDE");
+         int                 NEIGHBORHOOD_DIMENSION_MULTIPLIER = (Integer)parameters.get("NEIGHBORHOOD_DIMENSION_MULTIPLIER");
+         int                 EPOCH_INTERVAL_STRIDE             = (Integer)parameters.get("EPOCH_INTERVAL_STRIDE");
+         int                 EPOCH_INTERVAL_MULTIPLIER         = (Integer)parameters.get("EPOCH_INTERVAL_MULTIPLIER");
+
+         // Create world.
+         MoxWorx moxWorx = new MoxWorx();
+         moxWorx.random = new Random(RANDOM_SEED);
+         try
+         {
+            moxWorx.initCells(WIDTH, HEIGHT, NUM_OBSTACLE_TYPES, NUM_OBSTACLES, NUM_FOODS);
+            moxWorx.createMoxen(1, NUM_OBSTACLE_TYPES + 1,
+                                NUM_NEIGHBORHOODS,
+                                NEIGHBORHOOD_INITIAL_DIMENSION,
+                                NEIGHBORHOOD_DIMENSION_STRIDE,
+                                NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                                EPOCH_INTERVAL_STRIDE,
+                                EPOCH_INTERVAL_MULTIPLIER);
+         }
+         catch (Exception e)
+         {
+            System.err.println("Cannot initialize: " + e.getMessage());
+            System.exit(2);
+         }
+
+         // Train.
+         for (Mox mox : moxWorx.moxen)
+         {
+            mox.driver = Mox.DRIVER_TYPE.AUTOPILOT.getValue();
+         }
+         try
+         {
+            moxWorx.run(steps);
+         }
+         catch (Exception e)
+         {
+            System.err.println("Cannot train member " + id + ": " + e.getMessage());
+            return;
+         }
+
+         // Test.
+         moxWorx.reset();
+         for (Mox mox : moxWorx.moxen)
+         {
+            mox.driver = Mox.DRIVER_TYPE.METAMORPH_DB.getValue();
+         }
+         try
+         {
+            fitness = (float)moxWorx.run(steps);
+         }
+         catch (Exception e)
+         {
+            System.err.println("Cannot test member " + id + ": " + e.getMessage());
+            return;
+         }
+      }
+
+
+      // Load member.
+      void load(FileInputStream input) throws IOException
+      {
+         // DataInputStream is for unbuffered input.
+         DataInputStream reader = new DataInputStream(input);
+
+         id = Utility.loadInt(reader);
+         if (id >= IDdispenser)
+         {
+            IDdispenser = id + 1;
+         }
+         generation = Utility.loadInt(reader);
+         fitness    = Utility.loadFloat(reader);
+
+         // Load parameter genome.
+         moxParmGenome.loadValues(reader);
+      }
+
+
+      // Save member.
+      void save(FileOutputStream output) throws IOException
+      {
+         PrintWriter writer = new PrintWriter(new OutputStreamWriter(output));
+
+         Utility.saveInt(writer, id);
+         Utility.saveInt(writer, generation);
+         Utility.saveFloat(writer, fitness);
+         writer.flush();
+
+         // Save parameter genome.
+         moxParmGenome.saveValues(writer);
+         writer.flush();
+      }
+
+
+      // Print properties.
+      void printProperties()
+      {
+         System.out.println(getInfo());
+         System.out.println("parameters:");
+         moxParmGenome.print();
+      }
+
+
+      // Get information.
+      String getInfo()
+      {
+         return("id=" + id +
+                ", fitness=" + fitness +
+                ", generation=" + generation);
+      }
+   }
+
    // Main.
    public static void main(String[] args)
    {
-      EvolveMoxen evolveMoxen = new EvolveMoxen(args);
+      EvolveMoxWorx evolveMoxWorx = new EvolveMoxWorx(args);
 
-      evolveMoxen.start();
+      evolveMoxWorx.run();
       System.exit(0);
    }
 }

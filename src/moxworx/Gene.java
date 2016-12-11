@@ -10,10 +10,10 @@ import java.io.*;
 public class Gene
 {
    // Mutation rate.
-   double mutationRate;
+   float mutationRate;
 
    // Probability of random mutation.
-   double randomMutationRate;
+   float randomMutationRate;
 
    // Random numbers.
    int    randomSeed;
@@ -33,7 +33,7 @@ public class Gene
    double     dvalue, dmin, dmax, ddelta;
 
    // Constructors.
-   Gene(double mutationRate, double randomMutationRate, int randomSeed)
+   Gene(float mutationRate, float randomMutationRate, int randomSeed)
    {
       type                    = VALUE_TYPE.DOUBLE_VALUE;
       name                    = null;
@@ -48,7 +48,7 @@ public class Gene
 
 
    Gene(String name, int value, int min, int max, int delta,
-        double mutationRate, double randomMutationRate, int randomSeed)
+        float mutationRate, float randomMutationRate, int randomSeed)
    {
       type                    = VALUE_TYPE.INTEGER_VALUE;
       this.name               = new String(name);
@@ -67,7 +67,7 @@ public class Gene
 
 
    Gene(String name, float value, float min, float max, float delta,
-        double mutationRate, double randomMutationRate, int randomSeed)
+        float mutationRate, float randomMutationRate, int randomSeed)
    {
       type                    = VALUE_TYPE.FLOAT_VALUE;
       this.name               = new String(name);
@@ -86,7 +86,7 @@ public class Gene
 
 
    Gene(String name, double value, double min, double max, double delta,
-        double mutationRate, double randomMutationRate, int randomSeed)
+        float mutationRate, float randomMutationRate, int randomSeed)
    {
       type                    = VALUE_TYPE.DOUBLE_VALUE;
       this.name               = new String(name);
@@ -111,7 +111,7 @@ public class Gene
       float  f;
       double d;
 
-      if (randomizer.nextDouble() > mutationRate)
+      if (randomizer.nextFloat() > mutationRate)
       {
          return;
       }
@@ -119,7 +119,7 @@ public class Gene
       switch (type)
       {
       case INTEGER_VALUE:
-         if (randomizer.nextDouble() <= randomMutationRate)
+         if (randomizer.nextFloat() <= randomMutationRate)
          {
             i = imax - imin;
             if (i > 0)
@@ -149,7 +149,7 @@ public class Gene
          break;
 
       case FLOAT_VALUE:
-         if (randomizer.nextDouble() <= randomMutationRate)
+         if (randomizer.nextFloat() <= randomMutationRate)
          {
             fvalue = (randomizer.nextFloat() * (fmax - fmin)) + fmin;
          }
@@ -171,7 +171,7 @@ public class Gene
          break;
 
       case DOUBLE_VALUE:
-         if (randomizer.nextDouble() <= randomMutationRate)
+         if (randomizer.nextFloat() <= randomMutationRate)
          {
             dvalue = (randomizer.nextDouble() * (dmax - dmin)) + dmin;
          }
