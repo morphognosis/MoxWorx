@@ -22,12 +22,18 @@ import java.util.Vector;
 public class Morphognostic
 {
    // Parameters.
-   public static int NUM_NEIGHBORHOODS = 2;
-   public static int NEIGHBORHOOD_INITIAL_DIMENSION    = 3;
-   public static int NEIGHBORHOOD_DIMENSION_STRIDE     = 0;
-   public static int NEIGHBORHOOD_DIMENSION_MULTIPLIER = 3;
-   public static int EPOCH_INTERVAL_STRIDE             = 1;
-   public static int EPOCH_INTERVAL_MULTIPLIER         = 3;
+   public static int DEFAULT_NUM_NEIGHBORHOODS = 2;
+   public static int DEFAULT_NEIGHBORHOOD_INITIAL_DIMENSION    = 3;
+   public static int DEFAULT_NEIGHBORHOOD_DIMENSION_STRIDE     = 0;
+   public static int DEFAULT_NEIGHBORHOOD_DIMENSION_MULTIPLIER = 3;
+   public static int DEFAULT_EPOCH_INTERVAL_STRIDE             = 1;
+   public static int DEFAULT_EPOCH_INTERVAL_MULTIPLIER         = 3;
+   public int        NUM_NEIGHBORHOODS = DEFAULT_NUM_NEIGHBORHOODS;
+   public int        NEIGHBORHOOD_INITIAL_DIMENSION    = DEFAULT_NEIGHBORHOOD_INITIAL_DIMENSION;
+   public int        NEIGHBORHOOD_DIMENSION_STRIDE     = DEFAULT_NEIGHBORHOOD_DIMENSION_STRIDE;
+   public int        NEIGHBORHOOD_DIMENSION_MULTIPLIER = DEFAULT_NEIGHBORHOOD_DIMENSION_MULTIPLIER;
+   public int        EPOCH_INTERVAL_STRIDE             = DEFAULT_EPOCH_INTERVAL_STRIDE;
+   public int        EPOCH_INTERVAL_MULTIPLIER         = DEFAULT_EPOCH_INTERVAL_MULTIPLIER;
 
    // Neighborhood.
    public class Neighborhood
@@ -285,8 +291,34 @@ public class Morphognostic
    // Number of landmark types.
    public int numLandmarkTypes;
 
-   // Constructors.
+   // Constructor.
    public Morphognostic(int orientation, int numLandmarkTypes)
+   {
+      init(orientation, numLandmarkTypes);
+   }
+
+
+   // Construct with parameters.
+   public Morphognostic(int orientation, int numLandmarkTypes,
+                        int NUM_NEIGHBORHOODS,
+                        int NEIGHBORHOOD_INITIAL_DIMENSION,
+                        int NEIGHBORHOOD_DIMENSION_STRIDE,
+                        int NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                        int EPOCH_INTERVAL_STRIDE,
+                        int EPOCH_INTERVAL_MULTIPLIER
+                        )
+   {
+      this.NUM_NEIGHBORHOODS = NUM_NEIGHBORHOODS;
+      this.NEIGHBORHOOD_INITIAL_DIMENSION    = NEIGHBORHOOD_INITIAL_DIMENSION;
+      this.NEIGHBORHOOD_DIMENSION_STRIDE     = NEIGHBORHOOD_DIMENSION_STRIDE;
+      this.NEIGHBORHOOD_DIMENSION_MULTIPLIER = NEIGHBORHOOD_DIMENSION_MULTIPLIER;
+      this.EPOCH_INTERVAL_STRIDE             = EPOCH_INTERVAL_STRIDE;
+      this.EPOCH_INTERVAL_MULTIPLIER         = EPOCH_INTERVAL_MULTIPLIER;
+      init(orientation, numLandmarkTypes);
+   }
+
+
+   public void init(int orientation, int numLandmarkTypes)
    {
       this.orientation      = orientation;
       this.numLandmarkTypes = numLandmarkTypes;
@@ -365,6 +397,12 @@ public class Morphognostic
    {
       PrintWriter writer = new PrintWriter(new OutputStreamWriter(output));
 
+      Utility.saveInt(writer, NUM_NEIGHBORHOODS);
+      Utility.saveInt(writer, NEIGHBORHOOD_INITIAL_DIMENSION);
+      Utility.saveInt(writer, NEIGHBORHOOD_DIMENSION_STRIDE);
+      Utility.saveInt(writer, NEIGHBORHOOD_DIMENSION_MULTIPLIER);
+      Utility.saveInt(writer, EPOCH_INTERVAL_STRIDE);
+      Utility.saveInt(writer, EPOCH_INTERVAL_MULTIPLIER);
       Utility.saveInt(writer, orientation);
       Utility.saveInt(writer, numLandmarkTypes);
       for (Neighborhood n : neighborhoods)
@@ -395,10 +433,23 @@ public class Morphognostic
    // Load.
    public static Morphognostic load(FileInputStream input) throws EOFException, IOException
    {
-      DataInputStream reader           = new DataInputStream(input);
+      DataInputStream reader            = new DataInputStream(input);
+      int             NUM_NEIGHBORHOODS = Utility.loadInt(reader);
+      int             NEIGHBORHOOD_INITIAL_DIMENSION    = Utility.loadInt(reader);
+      int             NEIGHBORHOOD_DIMENSION_STRIDE     = Utility.loadInt(reader);
+      int             NEIGHBORHOOD_DIMENSION_MULTIPLIER = Utility.loadInt(reader);
+      int             EPOCH_INTERVAL_STRIDE             = Utility.loadInt(reader);
+      int             EPOCH_INTERVAL_MULTIPLIER         = Utility.loadInt(reader);
       int             orientation      = Utility.loadInt(reader);
       int             numLandmarkTypes = Utility.loadInt(reader);
-      Morphognostic   m = new Morphognostic(orientation, numLandmarkTypes);
+      Morphognostic   m = new Morphognostic(orientation, numLandmarkTypes,
+                                            NUM_NEIGHBORHOODS,
+                                            NEIGHBORHOOD_INITIAL_DIMENSION,
+                                            NEIGHBORHOOD_DIMENSION_STRIDE,
+                                            NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                                            EPOCH_INTERVAL_STRIDE,
+                                            EPOCH_INTERVAL_MULTIPLIER
+                                            );
 
       for (Neighborhood n : m.neighborhoods)
       {
@@ -428,7 +479,14 @@ public class Morphognostic
    // Clone.
    public Morphognostic clone()
    {
-      Morphognostic m = new Morphognostic(orientation, numLandmarkTypes);
+      Morphognostic m = new Morphognostic(orientation, numLandmarkTypes,
+                                          NUM_NEIGHBORHOODS,
+                                          NEIGHBORHOOD_INITIAL_DIMENSION,
+                                          NEIGHBORHOOD_DIMENSION_STRIDE,
+                                          NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                                          EPOCH_INTERVAL_STRIDE,
+                                          EPOCH_INTERVAL_MULTIPLIER
+                                          );
 
       for (int i = 0; i < NUM_NEIGHBORHOODS; i++)
       {
@@ -461,6 +519,12 @@ public class Morphognostic
    // Print.
    public void print()
    {
+      System.out.println("NUM_NEIGHBORHOODS=" + NUM_NEIGHBORHOODS);
+      System.out.println("NEIGHBORHOOD_INITIAL_DIMENSION=" + NEIGHBORHOOD_INITIAL_DIMENSION);
+      System.out.println("NEIGHBORHOOD_DIMENSION_STRIDE=" + NEIGHBORHOOD_DIMENSION_STRIDE);
+      System.out.println("NEIGHBORHOOD_DIMENSION_MULTIPLIER=" + NEIGHBORHOOD_DIMENSION_MULTIPLIER);
+      System.out.println("EPOCH_INTERVAL_STRIDE=" + EPOCH_INTERVAL_STRIDE);
+      System.out.println("EPOCH_INTERVAL_MULTIPLIER=" + EPOCH_INTERVAL_MULTIPLIER);
       System.out.println("orientation=" + orientation);
       System.out.println("numLandmarkTypes=" + numLandmarkTypes);
       for (int i = 0; i < neighborhoods.size(); i++)

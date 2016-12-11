@@ -63,12 +63,13 @@ public class MoxCells
    }
 
 
-   // Food exists?
-   public boolean foodExists()
+   // Count existing food.
+   public int countFood()
    {
       int x, y;
-      int w = size.width;
-      int h = size.height;
+      int w     = size.width;
+      int h     = size.height;
+      int count = 0;
 
       for (x = 0; x < w; x++)
       {
@@ -76,11 +77,11 @@ public class MoxCells
          {
             if (cells[x][y] == FOOD_CELL_VALUE)
             {
-               return(true);
+               count++;
             }
          }
       }
-      return(false);
+      return(count);
    }
 
 

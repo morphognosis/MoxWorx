@@ -107,6 +107,37 @@ public class Mox
       this.moxCells         = moxCells;
       this.numLandmarkTypes = numLandmarkTypes;
       init(x, y, direction);
+      morphognostic = new Morphognostic(direction, numLandmarkTypes);
+      Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(morphognostic.NUM_NEIGHBORHOODS - 1);
+      maxLandmarkEventAge = n.epoch + n.duration - 1;
+      metamorphs          = new ArrayList<Metamorph>();
+      initMetamorphNN();
+   }
+
+
+   public Mox(int id, int x, int y, int direction, int numLandmarkTypes, MoxCells moxCells,
+              int NUM_NEIGHBORHOODS,
+              int NEIGHBORHOOD_INITIAL_DIMENSION,
+              int NEIGHBORHOOD_DIMENSION_STRIDE,
+              int NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+              int EPOCH_INTERVAL_STRIDE,
+              int EPOCH_INTERVAL_MULTIPLIER)
+   {
+      this.id               = id;
+      this.moxCells         = moxCells;
+      this.numLandmarkTypes = numLandmarkTypes;
+      init(x, y, direction);
+      morphognostic = new Morphognostic(direction, numLandmarkTypes,
+                                        NUM_NEIGHBORHOODS,
+                                        NEIGHBORHOOD_INITIAL_DIMENSION,
+                                        NEIGHBORHOOD_DIMENSION_STRIDE,
+                                        NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                                        EPOCH_INTERVAL_STRIDE,
+                                        EPOCH_INTERVAL_MULTIPLIER);
+      Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(morphognostic.NUM_NEIGHBORHOODS - 1);
+      maxLandmarkEventAge = n.epoch + n.duration - 1;
+      metamorphs          = new ArrayList<Metamorph>();
+      initMetamorphNN();
    }
 
 
@@ -116,6 +147,11 @@ public class Mox
       this.moxCells    = moxCells;
       numLandmarkTypes = 1;
       init();
+      morphognostic = new Morphognostic(direction, numLandmarkTypes);
+      Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(morphognostic.NUM_NEIGHBORHOODS - 1);
+      maxLandmarkEventAge = n.epoch + n.duration - 1;
+      metamorphs          = new ArrayList<Metamorph>();
+      initMetamorphNN();
    }
 
 
@@ -142,12 +178,7 @@ public class Mox
          }
       }
       landmarkEvents = new Vector<LandmarkEvent>();
-      morphognostic  = new Morphognostic(direction, numLandmarkTypes);
-      Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(Morphognostic.NUM_NEIGHBORHOODS - 1);
-      maxLandmarkEventAge = n.epoch + n.duration - 1;
-      metamorphs          = new ArrayList<Metamorph>();
-      initMetamorphNN();
-      eventTime = 0;
+      eventTime      = 0;
    }
 
 
@@ -555,7 +586,7 @@ public class Mox
    public void initMetamorphNN()
    {
       metamorphNNattributeNames = new FastVector();
-      for (int i = 0; i < Morphognostic.NUM_NEIGHBORHOODS; i++)
+      for (int i = 0; i < morphognostic.NUM_NEIGHBORHOODS; i++)
       {
          int n = morphognostic.neighborhoods.get(i).sectors.length;
          for (int x = 0; x < n; x++)
@@ -632,7 +663,7 @@ public class Mox
    {
       double[]  attrValues = new double[instances.numAttributes()];
       int a = 0;
-      for (int i = 0; i < Morphognostic.NUM_NEIGHBORHOODS; i++)
+      for (int i = 0; i < morphognostic.NUM_NEIGHBORHOODS; i++)
       {
          int n = m.morphognostic.neighborhoods.get(i).sectors.length;
          for (int x = 0; x < n; x++)

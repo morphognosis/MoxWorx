@@ -46,12 +46,12 @@ public class MoxWorx
       "     [-numObstacleTypes <quantity> (default=1)]\n" +
       "     [-numObstacles <quantity> (default=0)]\n" +
       "     [-numFoods <quantity> (default=0)]\n" +
-      "     [-numNeighborhoods <quantity> (default=" + Morphognostic.NUM_NEIGHBORHOODS + ")]\n" +
-      "     [-neighborhoodInitialDimension <quantity> (default=" + Morphognostic.NEIGHBORHOOD_INITIAL_DIMENSION + ")]\n" +
-      "     [-neighborhoodDimensionStride <quantity> (default=" + Morphognostic.NEIGHBORHOOD_DIMENSION_STRIDE + ")]\n" +
-      "     [-neighborhoodDimensionMultiplier <quantity> (default=" + Morphognostic.NEIGHBORHOOD_DIMENSION_MULTIPLIER + ")]\n" +
-      "     [-epochIntervalStride <quantity> (default=" + Morphognostic.EPOCH_INTERVAL_STRIDE + ")]\n" +
-      "     [-epochIntervalMultiplier <quantity> (default=" + Morphognostic.EPOCH_INTERVAL_MULTIPLIER + ")]\n" +
+      "     [-numNeighborhoods <quantity> (default=" + Morphognostic.DEFAULT_NUM_NEIGHBORHOODS + ")]\n" +
+      "     [-neighborhoodInitialDimension <quantity> (default=" + Morphognostic.DEFAULT_NEIGHBORHOOD_INITIAL_DIMENSION + ")]\n" +
+      "     [-neighborhoodDimensionStride <quantity> (default=" + Morphognostic.DEFAULT_NEIGHBORHOOD_DIMENSION_STRIDE + ")]\n" +
+      "     [-neighborhoodDimensionMultiplier <quantity> (default=" + Morphognostic.DEFAULT_NEIGHBORHOOD_DIMENSION_MULTIPLIER + ")]\n" +
+      "     [-epochIntervalStride <quantity> (default=" + Morphognostic.DEFAULT_EPOCH_INTERVAL_STRIDE + ")]\n" +
+      "     [-epochIntervalMultiplier <quantity> (default=" + Morphognostic.DEFAULT_EPOCH_INTERVAL_MULTIPLIER + ")]\n" +
       "     [-randomSeed <random number seed>]\n" +
       "     [-save <file name>]\n" +
       "  Resume run:\n" +
@@ -65,17 +65,17 @@ public class MoxWorx
       "    java MoxWorx\n" +
       "      -pongTrainingFile <file name>\n" +
       "      -pongTestingFile <file name>\n" +
-      "     [-numNeighborhoods <quantity> (default=" + Morphognostic.NUM_NEIGHBORHOODS + ")]\n" +
-      "     [-neighborhoodInitialDimension <quantity> (default=" + Morphognostic.NEIGHBORHOOD_INITIAL_DIMENSION + ")]\n" +
-      "     [-neighborhoodDimensionStride <quantity> (default=" + Morphognostic.NEIGHBORHOOD_DIMENSION_STRIDE + ")]\n" +
-      "     [-neighborhoodDimensionMultiplier <quantity> (default=" + Morphognostic.NEIGHBORHOOD_DIMENSION_MULTIPLIER + ")]\n" +
-      "     [-epochIntervalStride <quantity> (default=" + Morphognostic.EPOCH_INTERVAL_STRIDE + ")]\n" +
-      "     [-epochIntervalMultiplier <quantity> (default=" + Morphognostic.EPOCH_INTERVAL_MULTIPLIER + ")]\n" +
+      "     [-numNeighborhoods <quantity> (default=" + Morphognostic.DEFAULT_NUM_NEIGHBORHOODS + ")]\n" +
+      "     [-neighborhoodInitialDimension <quantity> (default=" + Morphognostic.DEFAULT_NEIGHBORHOOD_INITIAL_DIMENSION + ")]\n" +
+      "     [-neighborhoodDimensionStride <quantity> (default=" + Morphognostic.DEFAULT_NEIGHBORHOOD_DIMENSION_STRIDE + ")]\n" +
+      "     [-neighborhoodDimensionMultiplier <quantity> (default=" + Morphognostic.DEFAULT_NEIGHBORHOOD_DIMENSION_MULTIPLIER + ")]\n" +
+      "     [-epochIntervalStride <quantity> (default=" + Morphognostic.DEFAULT_EPOCH_INTERVAL_STRIDE + ")]\n" +
+      "     [-epochIntervalMultiplier <quantity> (default=" + Morphognostic.DEFAULT_EPOCH_INTERVAL_MULTIPLIER + ")]\n" +
       "     [-randomSeed <random number seed>]\n" +
       "Exit codes:\n" +
       "  0=success\n" +
       "  1=fail\n" +
-      "  2=error\n";
+      "  2=error";
 
    // Default random seed.
    public static final int DEFAULT_RANDOM_SEED = 4517;
@@ -186,7 +186,13 @@ public class MoxWorx
 
 
    // Create moxen.
-   public void createMoxen(int numMoxen, int numLandmarkTypes)
+   public void createMoxen(int numMoxen, int numLandmarkTypes,
+                           int NUM_NEIGHBORHOODS,
+                           int NEIGHBORHOOD_INITIAL_DIMENSION,
+                           int NEIGHBORHOOD_DIMENSION_STRIDE,
+                           int NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                           int EPOCH_INTERVAL_STRIDE,
+                           int EPOCH_INTERVAL_MULTIPLIER)
    {
       int i, j, n, x, y, w, h;
 
@@ -205,7 +211,13 @@ public class MoxWorx
             {
                int o = Orientation.NORTH;
                o = random.nextInt(Orientation.NUM_ORIENTATIONS);
-               moxen.add(i, new Mox(i, x, y, o, numLandmarkTypes, moxCells));
+               moxen.add(i, new Mox(i, x, y, o, numLandmarkTypes, moxCells,
+                                    NUM_NEIGHBORHOODS,
+                                    NEIGHBORHOOD_INITIAL_DIMENSION,
+                                    NEIGHBORHOOD_DIMENSION_STRIDE,
+                                    NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                                    EPOCH_INTERVAL_STRIDE,
+                                    EPOCH_INTERVAL_MULTIPLIER));
                moxCells.cells[x][y] = moxCells.restoreCells[x][y] = MoxCells.MOX_CELL_VALUE;
                break;
             }
@@ -283,13 +295,7 @@ public class MoxWorx
    {
       PrintWriter writer = new PrintWriter(output);
 
-      // Save parameters.
-      Utility.saveInt(writer, Morphognostic.NUM_NEIGHBORHOODS);
-      Utility.saveInt(writer, Morphognostic.NEIGHBORHOOD_INITIAL_DIMENSION);
-      Utility.saveInt(writer, Morphognostic.NEIGHBORHOOD_DIMENSION_STRIDE);
-      Utility.saveInt(writer, Morphognostic.NEIGHBORHOOD_DIMENSION_MULTIPLIER);
-      Utility.saveInt(writer, Morphognostic.EPOCH_INTERVAL_STRIDE);
-      Utility.saveInt(writer, Morphognostic.EPOCH_INTERVAL_MULTIPLIER);
+      // Save obstacle types.
       Utility.saveInt(writer, numObstacleTypes);
 
       // Save cells.
@@ -330,13 +336,7 @@ public class MoxWorx
    {
       DataInputStream reader = new DataInputStream(input);
 
-      // Load parameters.
-      Morphognostic.NUM_NEIGHBORHOODS = Utility.loadInt(reader);
-      Morphognostic.NEIGHBORHOOD_INITIAL_DIMENSION    = Utility.loadInt(reader);
-      Morphognostic.NEIGHBORHOOD_DIMENSION_STRIDE     = Utility.loadInt(reader);
-      Morphognostic.NEIGHBORHOOD_DIMENSION_MULTIPLIER = Utility.loadInt(reader);
-      Morphognostic.EPOCH_INTERVAL_STRIDE             = Utility.loadInt(reader);
-      Morphognostic.EPOCH_INTERVAL_MULTIPLIER         = Utility.loadInt(reader);
+      // Load obstacle types.
       numObstacleTypes = Utility.loadInt(reader);
 
       // Load cells.
@@ -357,12 +357,12 @@ public class MoxWorx
 
 
    // Run.
-   // Return true if food not consumed, else false.
-   public boolean run(int steps)
+   // Return count of remaining food.
+   public int run(int steps)
    {
       if (steps >= 0)
       {
-         for (int i = 0; i < steps && moxCells.foodExists(); i++)
+         for (int i = 0; i < steps && moxCells.countFood() > 0; i++)
          {
             stepMoxen();
          }
@@ -371,14 +371,14 @@ public class MoxWorx
       {
          for (int i = 0; updateDashboard(i); )
          {
-            if (moxCells.foodExists())
+            if (moxCells.countFood() > 0)
             {
                stepMoxen();
                i++;
             }
          }
       }
-      return(moxCells.foodExists());
+      return(moxCells.countFood());
    }
 
 
@@ -814,22 +814,28 @@ public class MoxWorx
    public static void main(String[] args)
    {
       // Get options.
-      int     steps            = -1;
-      int     width            = -1;
-      int     height           = -1;
-      int     driver           = Mox.DRIVER_TYPE.AUTOPILOT.getValue();
-      boolean gotDriver        = false;
-      int     numMoxen         = -1;
-      int     numObstacleTypes = -1;
-      int     numObstacles     = -1;
-      int     numFoods         = -1;
-      int     randomSeed       = DEFAULT_RANDOM_SEED;
-      String  loadfile         = null;
-      String  savefile         = null;
-      String  pongTrainingFile = null;
-      String  pongTestingFile  = null;
-      boolean dashboard        = false;
-      boolean gotParm          = false;
+      int     steps             = -1;
+      int     width             = -1;
+      int     height            = -1;
+      int     driver            = Mox.DRIVER_TYPE.AUTOPILOT.getValue();
+      boolean gotDriver         = false;
+      int     numMoxen          = -1;
+      int     numObstacleTypes  = -1;
+      int     numObstacles      = -1;
+      int     numFoods          = -1;
+      int     randomSeed        = DEFAULT_RANDOM_SEED;
+      String  loadfile          = null;
+      String  savefile          = null;
+      String  pongTrainingFile  = null;
+      String  pongTestingFile   = null;
+      boolean dashboard         = false;
+      boolean gotParm           = false;
+      int     NUM_NEIGHBORHOODS = Morphognostic.DEFAULT_NUM_NEIGHBORHOODS;
+      int     NEIGHBORHOOD_INITIAL_DIMENSION    = Morphognostic.DEFAULT_NEIGHBORHOOD_INITIAL_DIMENSION;
+      int     NEIGHBORHOOD_DIMENSION_STRIDE     = Morphognostic.DEFAULT_NEIGHBORHOOD_DIMENSION_STRIDE;
+      int     NEIGHBORHOOD_DIMENSION_MULTIPLIER = Morphognostic.DEFAULT_NEIGHBORHOOD_DIMENSION_MULTIPLIER;
+      int     EPOCH_INTERVAL_STRIDE             = Morphognostic.DEFAULT_EPOCH_INTERVAL_STRIDE;
+      int     EPOCH_INTERVAL_MULTIPLIER         = Morphognostic.DEFAULT_EPOCH_INTERVAL_MULTIPLIER;
 
       for (int i = 0; i < args.length; i++)
       {
@@ -1057,14 +1063,14 @@ public class MoxWorx
             }
             try
             {
-               Morphognostic.NUM_NEIGHBORHOODS = Integer.parseInt(args[i]);
+               NUM_NEIGHBORHOODS = Integer.parseInt(args[i]);
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid numNeighborhoods option");
                System.err.println(MoxWorx.Usage);
                System.exit(2);
             }
-            if (Morphognostic.NUM_NEIGHBORHOODS < 0)
+            if (NUM_NEIGHBORHOODS < 0)
             {
                System.err.println("Invalid numNeighborhoods option");
                System.err.println(MoxWorx.Usage);
@@ -1084,15 +1090,15 @@ public class MoxWorx
             }
             try
             {
-               Morphognostic.NEIGHBORHOOD_INITIAL_DIMENSION = Integer.parseInt(args[i]);
+               NEIGHBORHOOD_INITIAL_DIMENSION = Integer.parseInt(args[i]);
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid neighborhoodInitialDimension option");
                System.err.println(MoxWorx.Usage);
                System.exit(2);
             }
-            if ((Morphognostic.NEIGHBORHOOD_INITIAL_DIMENSION < 3) ||
-                ((Morphognostic.NEIGHBORHOOD_INITIAL_DIMENSION % 2) == 0))
+            if ((NEIGHBORHOOD_INITIAL_DIMENSION < 3) ||
+                ((NEIGHBORHOOD_INITIAL_DIMENSION % 2) == 0))
             {
                System.err.println("Invalid neighborhoodInitialDimension option");
                System.err.println(MoxWorx.Usage);
@@ -1112,14 +1118,14 @@ public class MoxWorx
             }
             try
             {
-               Morphognostic.NEIGHBORHOOD_DIMENSION_STRIDE = Integer.parseInt(args[i]);
+               NEIGHBORHOOD_DIMENSION_STRIDE = Integer.parseInt(args[i]);
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid neighborhoodDimensionStride option");
                System.err.println(MoxWorx.Usage);
                System.exit(2);
             }
-            if (Morphognostic.NEIGHBORHOOD_DIMENSION_STRIDE < 0)
+            if (NEIGHBORHOOD_DIMENSION_STRIDE < 0)
             {
                System.err.println("Invalid neighborhoodDimensionStride option");
                System.err.println(MoxWorx.Usage);
@@ -1139,14 +1145,14 @@ public class MoxWorx
             }
             try
             {
-               Morphognostic.NEIGHBORHOOD_DIMENSION_MULTIPLIER = Integer.parseInt(args[i]);
+               NEIGHBORHOOD_DIMENSION_MULTIPLIER = Integer.parseInt(args[i]);
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid neighborhoodDimensionMultiplier option");
                System.err.println(MoxWorx.Usage);
                System.exit(2);
             }
-            if (Morphognostic.NEIGHBORHOOD_DIMENSION_MULTIPLIER < 0)
+            if (NEIGHBORHOOD_DIMENSION_MULTIPLIER < 0)
             {
                System.err.println("Invalid neighborhoodDimensionMultiplier option");
                System.err.println(MoxWorx.Usage);
@@ -1166,14 +1172,14 @@ public class MoxWorx
             }
             try
             {
-               Morphognostic.EPOCH_INTERVAL_STRIDE = Integer.parseInt(args[i]);
+               EPOCH_INTERVAL_STRIDE = Integer.parseInt(args[i]);
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid epochIntervalStride option");
                System.err.println(MoxWorx.Usage);
                System.exit(2);
             }
-            if (Morphognostic.EPOCH_INTERVAL_STRIDE < 0)
+            if (EPOCH_INTERVAL_STRIDE < 0)
             {
                System.err.println("Invalid epochIntervalStride option");
                System.err.println(MoxWorx.Usage);
@@ -1193,14 +1199,14 @@ public class MoxWorx
             }
             try
             {
-               Morphognostic.EPOCH_INTERVAL_MULTIPLIER = Integer.parseInt(args[i]);
+               EPOCH_INTERVAL_MULTIPLIER = Integer.parseInt(args[i]);
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid epochIntervalMultiplier option");
                System.err.println(MoxWorx.Usage);
                System.exit(2);
             }
-            if (Morphognostic.EPOCH_INTERVAL_MULTIPLIER < 0)
+            if (EPOCH_INTERVAL_MULTIPLIER < 0)
             {
                System.err.println("Invalid epochIntervalMultiplier option");
                System.err.println(MoxWorx.Usage);
@@ -1390,15 +1396,15 @@ public class MoxWorx
       }
 
       // Create world.
-      MoxWorx MoxWorx = new MoxWorx();
-      MoxWorx.random = new Random(randomSeed);
+      MoxWorx moxWorx = new MoxWorx();
+      moxWorx.random = new Random(randomSeed);
       if (pongTrainingFile == null)
       {
          if (loadfile != null)
          {
             try
             {
-               MoxWorx.load(loadfile);
+               moxWorx.load(loadfile);
             }
             catch (Exception e)
             {
@@ -1410,8 +1416,14 @@ public class MoxWorx
          {
             try
             {
-               MoxWorx.initCells(width, height, numObstacleTypes, numObstacles, numFoods);
-               MoxWorx.createMoxen(numMoxen, numObstacleTypes + 1);
+               moxWorx.initCells(width, height, numObstacleTypes, numObstacles, numFoods);
+               moxWorx.createMoxen(numMoxen, numObstacleTypes + 1,
+                                   NUM_NEIGHBORHOODS,
+                                   NEIGHBORHOOD_INITIAL_DIMENSION,
+                                   NEIGHBORHOOD_DIMENSION_STRIDE,
+                                   NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                                   EPOCH_INTERVAL_STRIDE,
+                                   EPOCH_INTERVAL_MULTIPLIER);
             }
             catch (Exception e)
             {
@@ -1423,11 +1435,11 @@ public class MoxWorx
          // Create dashboard?
          if (dashboard)
          {
-            MoxWorx.createDashboard();
+            moxWorx.createDashboard();
          }
 
          // Set mox driver.
-         for (Mox mox : MoxWorx.moxen)
+         for (Mox mox : moxWorx.moxen)
          {
             mox.driver = driver;
             if (driver == Mox.DRIVER_TYPE.METAMORPH_NN.getValue())
@@ -1445,21 +1457,21 @@ public class MoxWorx
          }
 
          // Run.
-         boolean foodExists = MoxWorx.run(steps);
+         int foodCount = moxWorx.run(steps);
 
          // Save?
          if (savefile != null)
          {
             try
             {
-               MoxWorx.save(savefile);
+               moxWorx.save(savefile);
             }
             catch (Exception e)
             {
                System.err.println("Cannot save to file " + savefile + ": " + e.getMessage());
             }
          }
-         if (foodExists)
+         if (foodCount > 0)
          {
             System.exit(1);
          }
@@ -1473,8 +1485,8 @@ public class MoxWorx
          // Run pong.
          try
          {
-            MoxWorx.loadPong(pongTrainingFile, pongTestingFile);
-            MoxWorx.runPong();
+            moxWorx.loadPong(pongTrainingFile, pongTestingFile);
+            moxWorx.runPong();
          }
          catch (Exception e)
          {
