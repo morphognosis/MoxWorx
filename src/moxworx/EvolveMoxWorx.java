@@ -55,6 +55,7 @@ public class EvolveMoxWorx
       NUM_OFFSPRING        = Utility.loadInt(reader);
       MUTATION_RATE        = Utility.loadFloat(reader);
       RANDOM_MUTATION_RATE = Utility.loadFloat(reader);
+      RANDOM_SEED          = Utility.loadInt(reader);
       setPopulationSize();
    }
 
@@ -72,6 +73,7 @@ public class EvolveMoxWorx
       Utility.saveInt(writer, NUM_OFFSPRING);
       Utility.saveFloat(writer, MUTATION_RATE);
       Utility.saveFloat(writer, RANDOM_MUTATION_RATE);
+      Utility.saveInt(writer, RANDOM_SEED);
    }
 
 
@@ -100,13 +102,6 @@ public class EvolveMoxWorx
       "      -steps <moxen steps>\n" +
       "      -input <evolution input file name>\n" +
       "      -output <evolution output file name>\n" +
-      "     [-dimensions <width> <height>]\n" +
-      "     [-numObstacleTypes <quantity>]\n" +
-      "     [-numObstacles <quantity>]\n" +
-      "     [-numFoods <quantity>]\n" +
-      "     [-mutationRate <mutation rate>]\n" +
-      "     [-randomMutationRate <random mutation rate>]\n" +
-      "     [-randomSeed <random seed> (default=" + DEFAULT_RANDOM_SEED + ")]\n" +
       "     [-logfile <log file name>]\n" +
       "  Print population properties:\n" +
       "    java EvolveMoxWorx\n" +
@@ -508,7 +503,9 @@ public class EvolveMoxWorx
 
          if (InputFileName != null)
          {
-            if (gotFitPopulationSize || gotNumMutants || gotNumOffspring)
+            if (gotFitPopulationSize || gotNumMutants || gotNumOffspring ||
+                gotDimensions || gotNumObstacleTypes || gotNumObstacles ||
+                gotNumFoods || gotMutationRate || gotRandomMutationRate || gotRandomSeed)
             {
                System.err.println(Usage);
                System.exit(1);
