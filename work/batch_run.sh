@@ -1,41 +1,29 @@
 for d in 10 15 20
 do
-  #echo dimensions = $d
+  #echo dimensions=$d
   for t in 1 2 4
   do
-    #echo obstacle types = $t
+    #echo obstacle_types=$t
     for o in 20 30 40
     do
-      #echo obstacles = $o
+      #echo obstacles=$o
       for f in 1 2 3
       do
-        #echo foods = $f
-        for n in 2 3 4
+        #echo foods=$f
+        s=$(( 0 ))
+        for r in 1 2 3 4 5 6 7 8 9 10
         do
-            #echo number neighborhoods = $n
-            for ns in 0 1 2
-            do
-                #echo neighborhood dimension stride = $ns
-                for nm in 3 2 1
-                do
-                    #echo neighborhood dimension multiplier = $nm
-                    for es in 1 2 3
-                    do
-                        #echo epoch stride = $es
-                        for em in 3 2 1
-                        do
-                            #echo epoch multiplier = $em
-                            for r in 1 2 3 4 5
-                            do
-                                #echo random seed = $r
-                                c="./moxworx.sh -steps 100 -dimensions $d $d -numMoxen 1 -numFoods $f -numObstacles $o -numObstacleTypes $t -randomSeed $r -numNeighborhoods $n -neighborhoodDimensionStride $ns -neighborhoodDimensionMultiplier $nm -epochIntervalStride $es -epochIntervalMultiplier $em"
-                                echo $c
-                                exit 1
-                            done
-                        done
-                    done
-                done
-            done
+          #echo random_seed=$r
+          l="d${d}_t${t}_o${o}_f${f}_r${r}"
+          java -cp ".;../lib/weka.jar" moxworx.EvolveMoxWorx -generations 10 -steps 500 -dimensions $d $d -numFoods $f -numObstacles $o -numObstacleTypes $t -output evolve_${l}.out -logfile evolve_${l}.log -randomSeed $r
+          x=`cat evolve_${l}.log | grep -A 1 Select | tail -1 | cut -d"=" -f3 | cut -d"," -f1 | cut -d"." -f1`
+          s=$(( $s + $x ))
+          if (( $r == 10 ))
+          then
+             a=$(( 100 * $s / 10 ))
+             a=`echo $a | sed 's/..$/.&/'`
+             echo ${d},${t},${o},${f},${a}
+          fi
         done
       done
     done
