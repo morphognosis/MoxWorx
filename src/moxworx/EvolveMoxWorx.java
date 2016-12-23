@@ -10,31 +10,37 @@ import java.io.*;
 public class EvolveMoxWorx
 {
    // Parameters.
-   public static final int   DEFAULT_WIDTH                = 10;
-   public int                WIDTH                        = DEFAULT_WIDTH;
-   public static final int   DEFAULT_HEIGHT               = 10;
-   public int                HEIGHT                       = DEFAULT_HEIGHT;
-   public static final int   DEFAULT_NUM_OBSTACLE_TYPES   = 1;
-   public int                NUM_OBSTACLE_TYPES           = DEFAULT_NUM_OBSTACLE_TYPES;
-   public static final int   DEFAULT_NUM_OBSTACLES        = 0;
-   public int                NUM_OBSTACLES                = DEFAULT_NUM_OBSTACLES;
-   public static final int   DEFAULT_NUM_FOODS            = 0;
-   public int                NUM_FOODS                    = DEFAULT_NUM_FOODS;
-   public static final int   DEFAULT_FIT_POPULATION_SIZE  = 20;
-   public int                FIT_POPULATION_SIZE          = DEFAULT_FIT_POPULATION_SIZE;
-   public static final int   DEFAULT_NUM_MUTANTS          = 10;
-   public int                NUM_MUTANTS                  = DEFAULT_NUM_MUTANTS;
-   public static final int   DEFAULT_NUM_OFFSPRING        = 10;
-   public int                NUM_OFFSPRING                = DEFAULT_NUM_OFFSPRING;
-   public int                POPULATION_SIZE              = (FIT_POPULATION_SIZE + NUM_MUTANTS + NUM_OFFSPRING);
-   public static final float DEFAULT_MUTATION_RATE        = 0.25f;
-   public float              MUTATION_RATE                = DEFAULT_MUTATION_RATE;
-   public static final float DEFAULT_RANDOM_MUTATION_RATE = 0.5f;
-   public float              RANDOM_MUTATION_RATE         = DEFAULT_RANDOM_MUTATION_RATE;
-   public static final int   DEFAULT_RANDOM_SEED          = 4517;
-   public int                RANDOM_SEED                  = DEFAULT_RANDOM_SEED;
-   public static final int   SAVE_FREQUENCY               = 1;
-   public static final float INVALID_FITNESS              = 1000.0f;
+   public static final int             DEFAULT_WIDTH                = 10;
+   public int                          WIDTH                        = DEFAULT_WIDTH;
+   public static final int             DEFAULT_HEIGHT               = 10;
+   public int                          HEIGHT                       = DEFAULT_HEIGHT;
+   public static final int             DEFAULT_NUM_OBSTACLE_TYPES   = 1;
+   public int                          NUM_OBSTACLE_TYPES           = DEFAULT_NUM_OBSTACLE_TYPES;
+   public static final int             DEFAULT_NUM_OBSTACLES        = 0;
+   public int                          NUM_OBSTACLES                = DEFAULT_NUM_OBSTACLES;
+   public static final int             DEFAULT_NUM_FOODS            = 0;
+   public int                          NUM_FOODS                    = DEFAULT_NUM_FOODS;
+   public static final int             DEFAULT_TRAINING_SET_SIZE    = 1;
+   public int                          TRAINING_SET_SIZE            = DEFAULT_TRAINING_SET_SIZE;
+   public static final float           DEFAULT_TRAINING_CELL_NOISE  = 0.0f;
+   public float                        TRAINING_CELL_NOISE          = DEFAULT_TRAINING_CELL_NOISE;
+   public static final Mox.DRIVER_TYPE DEFAULT_MOX_TEST_DRIVER      = Mox.DRIVER_TYPE.METAMORPH_DB;
+   public Mox.DRIVER_TYPE              MOX_TEST_DRIVER              = DEFAULT_MOX_TEST_DRIVER;
+   public static final int             DEFAULT_FIT_POPULATION_SIZE  = 20;
+   public int                          FIT_POPULATION_SIZE          = DEFAULT_FIT_POPULATION_SIZE;
+   public static final int             DEFAULT_NUM_MUTANTS          = 10;
+   public int                          NUM_MUTANTS                  = DEFAULT_NUM_MUTANTS;
+   public static final int             DEFAULT_NUM_OFFSPRING        = 10;
+   public int                          NUM_OFFSPRING                = DEFAULT_NUM_OFFSPRING;
+   public int                          POPULATION_SIZE              = (FIT_POPULATION_SIZE + NUM_MUTANTS + NUM_OFFSPRING);
+   public static final float           DEFAULT_MUTATION_RATE        = 0.25f;
+   public float                        MUTATION_RATE                = DEFAULT_MUTATION_RATE;
+   public static final float           DEFAULT_RANDOM_MUTATION_RATE = 0.5f;
+   public float                        RANDOM_MUTATION_RATE         = DEFAULT_RANDOM_MUTATION_RATE;
+   public static final int             DEFAULT_RANDOM_SEED          = 4517;
+   public int                          RANDOM_SEED                  = DEFAULT_RANDOM_SEED;
+   public static final int             SAVE_FREQUENCY               = 1;
+   public static final float           INVALID_FITNESS              = 1000.0f;
 
    public void setPopulationSize()
    {
@@ -45,11 +51,21 @@ public class EvolveMoxWorx
    // Load parameters.
    public void loadParameters(DataInputStream reader) throws IOException
    {
-      WIDTH                = Utility.loadInt(reader);
-      HEIGHT               = Utility.loadInt(reader);
-      NUM_OBSTACLE_TYPES   = Utility.loadInt(reader);
-      NUM_OBSTACLES        = Utility.loadInt(reader);
-      NUM_FOODS            = Utility.loadInt(reader);
+      WIDTH               = Utility.loadInt(reader);
+      HEIGHT              = Utility.loadInt(reader);
+      NUM_OBSTACLE_TYPES  = Utility.loadInt(reader);
+      NUM_OBSTACLES       = Utility.loadInt(reader);
+      NUM_FOODS           = Utility.loadInt(reader);
+      TRAINING_SET_SIZE   = Utility.loadInt(reader);
+      TRAINING_CELL_NOISE = Utility.loadFloat(reader);
+      if (Utility.loadInt(reader) == Mox.DRIVER_TYPE.METAMORPH_DB.getValue())
+      {
+         MOX_TEST_DRIVER = Mox.DRIVER_TYPE.METAMORPH_DB;
+      }
+      else
+      {
+         MOX_TEST_DRIVER = Mox.DRIVER_TYPE.METAMORPH_NN;
+      }
       FIT_POPULATION_SIZE  = Utility.loadInt(reader);
       NUM_MUTANTS          = Utility.loadInt(reader);
       NUM_OFFSPRING        = Utility.loadInt(reader);
@@ -68,6 +84,10 @@ public class EvolveMoxWorx
       Utility.saveInt(writer, NUM_OBSTACLE_TYPES);
       Utility.saveInt(writer, NUM_OBSTACLES);
       Utility.saveInt(writer, NUM_FOODS);
+      Utility.saveInt(writer, TRAINING_SET_SIZE);
+      Utility.saveFloat(writer, TRAINING_CELL_NOISE);
+      int driver = MOX_TEST_DRIVER.getValue();
+      Utility.saveInt(writer, driver);
       Utility.saveInt(writer, FIT_POPULATION_SIZE);
       Utility.saveInt(writer, NUM_MUTANTS);
       Utility.saveInt(writer, NUM_OFFSPRING);
@@ -89,6 +109,9 @@ public class EvolveMoxWorx
       "     [-numObstacleTypes <quantity> (default=" + DEFAULT_NUM_OBSTACLE_TYPES + ")]\n" +
       "     [-numObstacles <quantity> (default=" + DEFAULT_NUM_OBSTACLES + ")]\n" +
       "     [-numFoods <quantity> (default=" + DEFAULT_NUM_FOODS + ")]\n" +
+      "     [-trainingSetSize <quantity> (default=1)]\n" +
+      "     [-trainingCellNoise <0.0 - 1.0> (probability of changing cell value)]\n" +
+      "     [-moxTestDriver <metamorphDB | metamorphNN> (default=metamorphDB)]\n" +
       "     [-fitPopulationSize <fit population size> (default=" + DEFAULT_FIT_POPULATION_SIZE + ")]\n" +
       "     [-numMutants <number of mutants> (default=" + DEFAULT_NUM_MUTANTS + ")]\n" +
       "     [-numOffspring <number of offspring> (default=" + DEFAULT_NUM_OFFSPRING + ")]\n" +
@@ -156,6 +179,9 @@ public class EvolveMoxWorx
       boolean gotNumObstacleTypes   = false;
       boolean gotNumObstacles       = false;
       boolean gotNumFoods           = false;
+      boolean gotTrainingSetSize    = false;
+      boolean gotTrainingCellNoise  = false;
+      boolean gotMoxTestDriver      = false;
       boolean gotFitPopulationSize  = false;
       boolean gotNumMutants         = false;
       boolean gotNumOffspring       = false;
@@ -329,6 +355,67 @@ public class EvolveMoxWorx
             continue;
          }
 
+         if (args[i].equals("-trainingSetSize"))
+         {
+            i++;
+            if (i >= args.length)
+            {
+               System.err.println(Usage);
+               System.exit(1);
+            }
+            TRAINING_SET_SIZE = Integer.parseInt(args[i]);
+            if (TRAINING_SET_SIZE < 1)
+            {
+               System.err.println(Usage);
+               System.exit(1);
+            }
+            gotTrainingSetSize = true;
+            continue;
+         }
+
+         if (args[i].equals("-trainingCellNoise"))
+         {
+            i++;
+            if (i >= args.length)
+            {
+               System.err.println(Usage);
+               System.exit(1);
+            }
+            TRAINING_CELL_NOISE = Float.parseFloat(args[i]);
+            if ((TRAINING_CELL_NOISE < 0.0f) || (TRAINING_CELL_NOISE > 1.0f))
+            {
+               System.err.println(Usage);
+               System.exit(1);
+            }
+            gotTrainingCellNoise = true;
+            continue;
+         }
+
+         if (args[i].equals("-moxTestDriver"))
+         {
+            i++;
+            if (i >= args.length)
+            {
+               System.err.println(Usage);
+               System.exit(1);
+            }
+            if (args[i].equals("metamorphDB"))
+            {
+               MOX_TEST_DRIVER = Mox.DRIVER_TYPE.METAMORPH_DB;
+            }
+            else if (args[i].equals("metamorphNN"))
+            {
+               MOX_TEST_DRIVER = Mox.DRIVER_TYPE.METAMORPH_NN;
+            }
+            else
+            {
+               System.err.println(Usage);
+               System.exit(1);
+            }
+            gotMoxTestDriver = true;
+            continue;
+         }
+
          if (args[i].equals("-fitPopulationSize"))
          {
             i++;
@@ -471,6 +558,7 @@ public class EvolveMoxWorx
              (OutputFileName != null) ||
              (LogFileName != null) ||
              gotDimensions || gotNumObstacleTypes || gotNumObstacles || gotNumFoods ||
+             gotTrainingSetSize || gotTrainingCellNoise || gotMoxTestDriver ||
              gotFitPopulationSize || gotNumMutants || gotNumOffspring ||
              gotMutationRate || gotRandomMutationRate || gotRandomSeed)
          {
@@ -505,7 +593,8 @@ public class EvolveMoxWorx
          {
             if (gotFitPopulationSize || gotNumMutants || gotNumOffspring ||
                 gotDimensions || gotNumObstacleTypes || gotNumObstacles ||
-                gotNumFoods || gotMutationRate || gotRandomMutationRate || gotRandomSeed)
+                gotNumFoods || gotTrainingSetSize || gotTrainingCellNoise || gotMoxTestDriver ||
+                gotMutationRate || gotRandomMutationRate || gotRandomSeed)
             {
                System.err.println(Usage);
                System.exit(1);
@@ -610,13 +699,13 @@ public class EvolveMoxWorx
          if (i == 0)
          {
             Population[i] = new Member(0, Randomizer);
-            Population[i].evaluate(Steps);
+            Population[i].evaluate(Steps, this);
          }
          else
          {
             // Mutate parameters.
             Population[i] = new Member(Population[0], 0, Randomizer);
-            Population[i].evaluate(Steps);
+            Population[i].evaluate(Steps, this);
          }
       }
       Fittest = new float[Generations + 1];
@@ -827,7 +916,7 @@ public class EvolveMoxWorx
 
          // Create mutant member.
          mutant = new Member(member, member.generation + 1, Randomizer);
-         mutant.evaluate(Steps);
+         mutant.evaluate(Steps, this);
          Population[FIT_POPULATION_SIZE + i] = mutant;
          log("    member=" + j + ", " + member.getInfo() +
              " -> member=" + (FIT_POPULATION_SIZE + i) +
@@ -858,7 +947,7 @@ public class EvolveMoxWorx
             offspring = new Member(member1, member2,
                                    (member1.generation > member2.generation ?
                                     member1.generation : member2.generation) + 1, Randomizer);
-            offspring.evaluate(Steps);
+            offspring.evaluate(Steps, this);
             Population[FIT_POPULATION_SIZE + NUM_MUTANTS + i] = offspring;
             log("    member=" + j + ", " + member1.getInfo() + " + member=" +
                 k + ", " + member2.getInfo() +
@@ -1021,8 +1110,10 @@ public class EvolveMoxWorx
 
 
       // Evaluate fitness.
-      public void evaluate(int steps)
+      public void evaluate(int steps, EvolveMoxWorx evolver)
       {
+         int t, v, x, y;
+
          fitness = INVALID_FITNESS;
 
          // Get parameters.
@@ -1055,25 +1146,55 @@ public class EvolveMoxWorx
          }
 
          // Train.
-         for (Mox mox : moxWorx.moxen)
+         Random   random   = evolver.Randomizer;
+         MoxCells moxCells = moxWorx.moxCells;
+         int      w        = moxCells.size.width;
+         int      h        = moxCells.size.height;
+         for (t = 0; t < evolver.TRAINING_SET_SIZE; t++)
          {
-            mox.driver = Mox.DRIVER_TYPE.AUTOPILOT.getValue();
-         }
-         try
-         {
-            moxWorx.run(steps);
-         }
-         catch (Exception e)
-         {
-            System.err.println("Cannot train member " + id + ": " + e.getMessage());
-            return;
+            moxWorx.reset();
+            for (x = 0; x < w; x++)
+            {
+               for (y = 0; y < h; y++)
+               {
+                  if (random.nextFloat() < evolver.TRAINING_CELL_NOISE)
+                  {
+                     if ((moxCells.cells[x][y] == MoxCells.EMPTY_CELL_VALUE) ||
+                         (moxCells.cells[x][y] >= MoxCells.OBSTACLE_CELLS_BEGIN_VALUE))
+                     {
+                        v = random.nextInt(NUM_OBSTACLE_TYPES + 1);
+                        if (v == 0)
+                        {
+                           moxCells.cells[x][y] = MoxCells.EMPTY_CELL_VALUE;
+                        }
+                        else
+                        {
+                           moxCells.cells[x][y] = v + MoxCells.OBSTACLE_CELLS_BEGIN_VALUE - 1;
+                        }
+                     }
+                  }
+               }
+            }
+            for (Mox mox : moxWorx.moxen)
+            {
+               mox.driver = Mox.DRIVER_TYPE.AUTOPILOT.getValue();
+            }
+            try
+            {
+               moxWorx.run(steps);
+            }
+            catch (Exception e)
+            {
+               System.err.println("Cannot train member " + id + ": " + e.getMessage());
+               return;
+            }
          }
 
          // Test.
          moxWorx.reset();
          for (Mox mox : moxWorx.moxen)
          {
-            mox.driver = Mox.DRIVER_TYPE.METAMORPH_DB.getValue();
+            mox.driver = MOX_TEST_DRIVER.getValue();
          }
          try
          {

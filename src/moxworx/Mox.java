@@ -199,7 +199,6 @@ public class Mox
          sensors[i] = 0.0f;
       }
       response       = WAIT;
-      driver         = DRIVER_TYPE.AUTOPILOT.getValue();
       driverResponse = WAIT;
       for (int i = 0; i < moxCells.size.width; i++)
       {

@@ -1437,6 +1437,10 @@ public class MoxWorx
          {
             moxWorx.createDashboard();
          }
+         else
+         {
+            moxWorx.reset();
+         }
 
          // Set mox driver.
          for (Mox mox : moxWorx.moxen)
