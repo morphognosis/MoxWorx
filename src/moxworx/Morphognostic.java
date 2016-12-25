@@ -531,13 +531,17 @@ public class Morphognostic
       {
          Neighborhood n = neighborhoods.get(i);
          System.out.println("neighborhood=" + i);
+         System.out.println("\tdx/dy=" + n.dx + "/" + n.dy);
+         System.out.println("\tdimension=" + n.dimension);
+         System.out.println("\tepoch/duration=" + n.epoch + "/" + n.duration);
          for (int x = 0; x < n.sectors.length; x++)
          {
             for (int y = 0; y < n.sectors.length; y++)
             {
                System.out.println("\tsector[" + x + "][" + y + "]:");
-               System.out.print("\t\tdensities:");
                Neighborhood.Sector s = n.sectors[x][y];
+               System.out.println("\t\tdx/dy=" + s.dx + "/" + s.dy);
+               System.out.print("\t\tdensities:");
                for (int j = 0; j < numLandmarkTypes; j++)
                {
                   System.out.print(" " + s.typeDensities[j]);
