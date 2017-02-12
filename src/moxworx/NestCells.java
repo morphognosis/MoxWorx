@@ -1,25 +1,24 @@
 // For conditions of distribution and use, see copyright notice in MoxWorx.java
 
-// Mox cells.
+// Nest cells.
 
 package moxworx;
 
 import java.io.*;
 import java.awt.*;
 
-// Mox cells.
-public class MoxCells
+public class NestCells
 {
    // Cell values.
-   public static final int EMPTY_CELL_VALUE           = 0;
+   // See MoxWorx.EMPTY_CELL_VALUE.
    public static final int FOOD_CELL_VALUE            = 1;
    public static final int MOX_CELL_VALUE             = 2;
-   public static final int OBSTACLE_CELLS_BEGIN_VALUE = 3;
+   public static final int LANDMARK_CELLS_BEGIN_VALUE = 3;
 
-   // Color.
-   public static final Color EMPTY_CELL_COLOR = Color.WHITE;
-   public static final Color FOOD_CELL_COLOR  = Color.GREEN;
-   public static final Color MOX_CELL_COLOR   = Color.BLUE;
+   // Colors.
+   // See MoxWorx.EMPTY_CELL_COLOR.
+   public static final Color FOOD_CELL_COLOR = Color.GREEN;
+   public static final Color MOX_CELL_COLOR  = Color.BLUE;
 
    // Cells.
    public Dimension size;
@@ -27,7 +26,7 @@ public class MoxCells
    public int[][]   restoreCells;
 
    // Constructors.
-   public MoxCells(Dimension size)
+   public NestCells(Dimension size)
    {
       // Create cells.
       this.size    = size;
@@ -43,7 +42,7 @@ public class MoxCells
    }
 
 
-   public MoxCells()
+   public NestCells()
    {
       size = new Dimension();
    }

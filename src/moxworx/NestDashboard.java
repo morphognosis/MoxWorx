@@ -1,6 +1,6 @@
 // For conditions of distribution and use, see copyright notice in MoxWorx.java
 
-// MoxWorx dashboard.
+// Nest dashboard.
 
 package moxworx;
 
@@ -11,26 +11,22 @@ import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.event.*;
 
-// Mox dashboard.
-public class MoxWorxDashboard extends JFrame
+public class NestDashboard extends JFrame
 {
    private static final long serialVersionUID = 0L;
 
    // Moxen.
-   ArrayList<Mox> moxen;
+   ArrayList<NestingMox> moxen;
 
    // Moxen dashboards.
-   ArrayList<MoxDashboard> moxenDashboards;
+   ArrayList<NestingMoxDashboard> moxenDashboards;
    int currentMox;
 
-   // Mox cells.
-   MoxCells moxCells;
+   // Nest cells.
+   NestCells nestCells;
 
-   // Number of obstacle types.
-   int numObstacleTypes;
-
-   // Title.
-   static final String TITLE = "MoxWorx";
+   // Number of landmark types.
+   int numLandmarkTypes;
 
    // Dimensions.
    static final Dimension DASHBOARD_SIZE = new Dimension(600, 700);
@@ -50,21 +46,21 @@ public class MoxWorxDashboard extends JFrame
    boolean quit;
 
    // Constructors.
-   public MoxWorxDashboard(MoxCells moxCells, int numObstacleTypes, ArrayList<Mox> moxen)
+   public NestDashboard(NestCells nestCells, int numLandmarkTypes, ArrayList<NestingMox> moxen)
    {
-      this.moxCells         = moxCells;
-      this.numObstacleTypes = numObstacleTypes;
+      this.nestCells        = nestCells;
+      this.numLandmarkTypes = numLandmarkTypes;
       setMoxen(moxen);
       currentMox = -1;
       init();
    }
 
 
-   public MoxWorxDashboard(MoxCells moxCells, int numObstacleTypes)
+   public NestDashboard(NestCells nestCells, int numLandmarkTypes)
    {
-      this.moxCells         = moxCells;
-      this.numObstacleTypes = numObstacleTypes;
-      moxen = new ArrayList<Mox>();
+      this.nestCells        = nestCells;
+      this.numLandmarkTypes = numLandmarkTypes;
+      moxen = new ArrayList<NestingMox>();
       setMoxen(moxen);
       currentMox = -1;
       init();
@@ -75,7 +71,7 @@ public class MoxWorxDashboard extends JFrame
    void init()
    {
       // Set up dashboard.
-      setTitle(TITLE);
+      setTitle("Nest");
       addWindowListener(new WindowAdapter()
                         {
                            public void windowClosing(WindowEvent e)
@@ -119,18 +115,18 @@ public class MoxWorxDashboard extends JFrame
 
 
    // Set moxen.
-   void setMoxen(ArrayList<Mox> moxen)
+   void setMoxen(ArrayList<NestingMox> moxen)
    {
       // Close previous dashboards.
       close();
 
       // Create moxen dashboards.
       this.moxen      = moxen;
-      moxenDashboards = new ArrayList<MoxDashboard>();
-      MoxDashboard moxDashboard;
+      moxenDashboards = new ArrayList<NestingMoxDashboard>();
+      NestingMoxDashboard moxDashboard;
       for (int i = 0; i < moxen.size(); i++)
       {
-         moxDashboard = new MoxDashboard(moxen.get(i), this);
+         moxDashboard = new NestingMoxDashboard(moxen.get(i), this);
          moxenDashboards.add(i, moxDashboard);
       }
    }
@@ -288,37 +284,37 @@ public class MoxWorxDashboard extends JFrame
          imageGraphics.setColor(Color.white);
          imageGraphics.fillRect(0, 0, canvasSize.width, canvasSize.height);
 
-         cellWidth  = (float)canvasSize.width / (float)moxCells.size.width;
-         cellHeight = (float)canvasSize.height / (float)moxCells.size.height;
+         cellWidth  = (float)canvasSize.width / (float)nestCells.size.width;
+         cellHeight = (float)canvasSize.height / (float)nestCells.size.height;
 
          // Draw cells.
          Random random = new Random();
-         for (x = x2 = 0; x < moxCells.size.width;
+         for (x = x2 = 0; x < nestCells.size.width;
               x++, x2 = (int)(cellWidth * (double)x))
          {
             for (y = 0, y2 = canvasSize.height - (int)cellHeight;
-                 y < moxCells.size.height;
-                 y++, y2 = (int)(cellHeight * (double)(moxCells.size.height - (y + 1))))
+                 y < nestCells.size.height;
+                 y++, y2 = (int)(cellHeight * (double)(nestCells.size.height - (y + 1))))
             {
-               switch (moxCells.cells[x][y])
+               switch (nestCells.cells[x][y])
                {
-               case MoxCells.EMPTY_CELL_VALUE:
-                  imageGraphics.setColor(MoxCells.EMPTY_CELL_COLOR);
+               case MoxWorx.EMPTY_CELL_VALUE:
+                  imageGraphics.setColor(MoxWorx.EMPTY_CELL_COLOR);
                   imageGraphics.fillRect(x2, y2, (int)cellWidth + 1,
                                          (int)cellHeight + 1);
                   break;
 
-               case MoxCells.FOOD_CELL_VALUE:
+               case NestCells.FOOD_CELL_VALUE:
                   imageGraphics.setColor(Color.white);
                   imageGraphics.fillRect(x2 + 1, y2 + 1, (int)cellWidth - 1,
                                          (int)cellHeight - 1);
-                  imageGraphics.setColor(MoxCells.FOOD_CELL_COLOR);
+                  imageGraphics.setColor(NestCells.FOOD_CELL_COLOR);
                   imageGraphics.fillOval(x2, y2, (int)cellWidth,
                                          (int)cellHeight);
                   break;
 
                default:
-                  random.setSeed(moxCells.cells[x][y]);
+                  random.setSeed(nestCells.cells[x][y]);
                   float r     = random.nextFloat();
                   float g     = random.nextFloat();
                   float b     = random.nextFloat();
@@ -335,7 +331,7 @@ public class MoxWorxDashboard extends JFrame
          imageGraphics.setColor(Color.black);
          y2 = canvasSize.height;
 
-         for (x = 1, x2 = (int)cellWidth; x < moxCells.size.width;
+         for (x = 1, x2 = (int)cellWidth; x < nestCells.size.width;
               x++, x2 = (int)(cellWidth * (double)x))
          {
             imageGraphics.drawLine(x2, 0, x2, y2);
@@ -343,7 +339,7 @@ public class MoxWorxDashboard extends JFrame
 
          x2 = canvasSize.width;
 
-         for (y = 1, y2 = (int)cellHeight; y < moxCells.size.height;
+         for (y = 1, y2 = (int)cellHeight; y < nestCells.size.height;
               y++, y2 = (int)(cellHeight * (double)y))
          {
             imageGraphics.drawLine(0, y2, x2, y2);
@@ -352,15 +348,15 @@ public class MoxWorxDashboard extends JFrame
          imageGraphics.setColor(Color.black);
 
          // Draw moxen.
-         Mox mox;
+         NestingMox mox;
          int[] vx = new int[3];
          int[] vy = new int[3];
          for (int i = 0; i < moxen.size(); i++)
          {
-            mox = (Mox)moxen.get(i);
+            mox = (NestingMox)moxen.get(i);
             x2  = (int)(cellWidth * (double)mox.x);
             y2  = (int)(cellHeight *
-                        (double)(moxCells.size.height - (mox.y + 1)));
+                        (double)(nestCells.size.height - (mox.y + 1)));
 
             // Highlight selected mox?
             if (i == currentMox)
@@ -373,7 +369,7 @@ public class MoxWorxDashboard extends JFrame
             }
             imageGraphics.fillRect(x2 + 1, y2 + 1, (int)cellWidth - 1,
                                    (int)cellHeight - 1);
-            imageGraphics.setColor(MoxCells.MOX_CELL_COLOR);
+            imageGraphics.setColor(NestCells.MOX_CELL_COLOR);
             if (mox.direction == Orientation.NORTH)
             {
                vx[0] = x2 + (int)(cellWidth * 0.5f);
@@ -424,19 +420,19 @@ public class MoxWorxDashboard extends JFrame
          // Mouse pressed.
          public void mousePressed(MouseEvent evt)
          {
-            int     i;
-            int     x;
-            int     y;
-            double  cellWidth  = (double)canvasSize.width / (double)moxCells.size.width;
-            double  cellHeight = (double)canvasSize.height / (double)moxCells.size.height;
-            Mox     mox;
-            boolean moxSelected;
+            int        i;
+            int        x;
+            int        y;
+            double     cellWidth  = (double)canvasSize.width / (double)nestCells.size.width;
+            double     cellHeight = (double)canvasSize.height / (double)nestCells.size.height;
+            NestingMox mox;
+            boolean    moxSelected;
 
             x = (int)((double)evt.getX() / cellWidth);
-            y = moxCells.size.height - (int)((double)evt.getY() / cellHeight) - 1;
+            y = nestCells.size.height - (int)((double)evt.getY() / cellHeight) - 1;
 
-            if ((x >= 0) && (x < moxCells.size.width) &&
-                (y >= 0) && (y < moxCells.size.height))
+            if ((x >= 0) && (x < nestCells.size.width) &&
+                (y >= 0) && (y < nestCells.size.height))
             {
                lastX = x;
                lastY = y;
@@ -479,14 +475,14 @@ public class MoxWorxDashboard extends JFrame
 
                if (!moxSelected)
                {
-                  int n = MoxCells.OBSTACLE_CELLS_BEGIN_VALUE + numObstacleTypes;
-                  moxCells.cells[x][y] = (moxCells.cells[x][y] + 1) % n;
-                  if (moxCells.cells[x][y] == MoxCells.EMPTY_CELL_VALUE)
+                  int n = NestCells.LANDMARK_CELLS_BEGIN_VALUE + numLandmarkTypes;
+                  nestCells.cells[x][y] = (nestCells.cells[x][y] + 1) % n;
+                  if (nestCells.cells[x][y] == MoxWorx.EMPTY_CELL_VALUE)
                   {
                      for (i = 0; i < moxen.size(); i++)
                      {
                         mox = moxen.get(i);
-                        mox.obstacleMap[x][y] = false;
+                        mox.landmarkMap[x][y] = false;
                      }
                   }
                }
@@ -505,21 +501,21 @@ public class MoxWorxDashboard extends JFrame
          {
             int    x;
             int    y;
-            double cellWidth  = (double)canvasSize.width / (double)moxCells.size.width;
-            double cellHeight = (double)canvasSize.height / (double)moxCells.size.height;
-            int    n          = MoxCells.OBSTACLE_CELLS_BEGIN_VALUE + numObstacleTypes;
+            double cellWidth  = (double)canvasSize.width / (double)nestCells.size.width;
+            double cellHeight = (double)canvasSize.height / (double)nestCells.size.height;
+            int    n          = NestCells.LANDMARK_CELLS_BEGIN_VALUE + numLandmarkTypes;
 
             x = (int)((double)evt.getX() / cellWidth);
-            y = moxCells.size.height - (int)((double)evt.getY() / cellHeight) - 1;
+            y = nestCells.size.height - (int)((double)evt.getY() / cellHeight) - 1;
 
-            if ((x >= 0) && (x < moxCells.size.width) &&
-                (y >= 0) && (y < moxCells.size.height))
+            if ((x >= 0) && (x < nestCells.size.width) &&
+                (y >= 0) && (y < nestCells.size.height))
             {
                if ((x != lastX) || (y != lastY))
                {
                   lastX = x;
                   lastY = y;
-                  moxCells.cells[x][y] = (moxCells.cells[x][y] + 1) % n;
+                  nestCells.cells[x][y] = (nestCells.cells[x][y] + 1) % n;
 
                   // Refresh display.
                   update();
@@ -592,7 +588,7 @@ public class MoxWorxDashboard extends JFrame
          if (evt.getSource() == (Object)resetButton)
          {
             currentMox = -1;
-            moxCells.restore();
+            nestCells.restore();
             int numMoxen = moxen.size();
             for (int i = 0; i < numMoxen; i++)
             {

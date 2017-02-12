@@ -1,5 +1,5 @@
 /*
- * Evolve mox by mutating and recombining parameters.
+ * Evolve foraging mox by mutating and recombining parameters.
  */
 
 package moxworx;
@@ -7,40 +7,40 @@ package moxworx;
 import java.util.*;
 import java.io.*;
 
-public class EvolveMoxWorx
+public class EvolveForage
 {
    // Parameters.
-   public static final int             DEFAULT_WIDTH                = 10;
-   public int                          WIDTH                        = DEFAULT_WIDTH;
-   public static final int             DEFAULT_HEIGHT               = 10;
-   public int                          HEIGHT                       = DEFAULT_HEIGHT;
-   public static final int             DEFAULT_NUM_OBSTACLE_TYPES   = 1;
-   public int                          NUM_OBSTACLE_TYPES           = DEFAULT_NUM_OBSTACLE_TYPES;
-   public static final int             DEFAULT_NUM_OBSTACLES        = 0;
-   public int                          NUM_OBSTACLES                = DEFAULT_NUM_OBSTACLES;
-   public static final int             DEFAULT_NUM_FOODS            = 0;
-   public int                          NUM_FOODS                    = DEFAULT_NUM_FOODS;
-   public static final int             DEFAULT_TRAINING_SET_SIZE    = 1;
-   public int                          TRAINING_SET_SIZE            = DEFAULT_TRAINING_SET_SIZE;
-   public static final float           DEFAULT_TRAINING_CELL_NOISE  = 0.0f;
-   public float                        TRAINING_CELL_NOISE          = DEFAULT_TRAINING_CELL_NOISE;
-   public static final Mox.DRIVER_TYPE DEFAULT_MOX_TEST_DRIVER      = Mox.DRIVER_TYPE.METAMORPH_DB;
-   public Mox.DRIVER_TYPE              MOX_TEST_DRIVER              = DEFAULT_MOX_TEST_DRIVER;
-   public static final int             DEFAULT_FIT_POPULATION_SIZE  = 20;
-   public int                          FIT_POPULATION_SIZE          = DEFAULT_FIT_POPULATION_SIZE;
-   public static final int             DEFAULT_NUM_MUTANTS          = 10;
-   public int                          NUM_MUTANTS                  = DEFAULT_NUM_MUTANTS;
-   public static final int             DEFAULT_NUM_OFFSPRING        = 10;
-   public int                          NUM_OFFSPRING                = DEFAULT_NUM_OFFSPRING;
-   public int                          POPULATION_SIZE              = (FIT_POPULATION_SIZE + NUM_MUTANTS + NUM_OFFSPRING);
-   public static final float           DEFAULT_MUTATION_RATE        = 0.25f;
-   public float                        MUTATION_RATE                = DEFAULT_MUTATION_RATE;
-   public static final float           DEFAULT_RANDOM_MUTATION_RATE = 0.5f;
-   public float                        RANDOM_MUTATION_RATE         = DEFAULT_RANDOM_MUTATION_RATE;
-   public static final int             DEFAULT_RANDOM_SEED          = 4517;
-   public int                          RANDOM_SEED                  = DEFAULT_RANDOM_SEED;
-   public static final int             SAVE_FREQUENCY               = 1;
-   public static final float           INVALID_FITNESS              = 1000.0f;
+   public static final int   DEFAULT_WIDTH               = 10;
+   public int                WIDTH                       = DEFAULT_WIDTH;
+   public static final int   DEFAULT_HEIGHT              = 10;
+   public int                HEIGHT                      = DEFAULT_HEIGHT;
+   public static final int   DEFAULT_NUM_LANDMARK_TYPES  = 1;
+   public int                NUM_LANDMARK_TYPES          = DEFAULT_NUM_LANDMARK_TYPES;
+   public static final int   DEFAULT_NUM_LANDMARKS       = 0;
+   public int                NUM_LANDMARKS               = DEFAULT_NUM_LANDMARKS;
+   public static final int   DEFAULT_NUM_FOODS           = 0;
+   public int                NUM_FOODS                   = DEFAULT_NUM_FOODS;
+   public static final int   DEFAULT_TRAINING_SET_SIZE   = 1;
+   public int                TRAINING_SET_SIZE           = DEFAULT_TRAINING_SET_SIZE;
+   public static final float DEFAULT_TRAINING_CELL_NOISE = 0.0f;
+   public float              TRAINING_CELL_NOISE         = DEFAULT_TRAINING_CELL_NOISE;
+   public static final ForagerMox.DRIVER_TYPE DEFAULT_MOX_TEST_DRIVER = ForagerMox.DRIVER_TYPE.METAMORPH_DB;
+   public ForagerMox.DRIVER_TYPE              MOX_TEST_DRIVER         = DEFAULT_MOX_TEST_DRIVER;
+   public static final int   DEFAULT_FIT_POPULATION_SIZE = 20;
+   public int                FIT_POPULATION_SIZE         = DEFAULT_FIT_POPULATION_SIZE;
+   public static final int   DEFAULT_NUM_MUTANTS         = 10;
+   public int                NUM_MUTANTS                  = DEFAULT_NUM_MUTANTS;
+   public static final int   DEFAULT_NUM_OFFSPRING        = 10;
+   public int                NUM_OFFSPRING                = DEFAULT_NUM_OFFSPRING;
+   public int                POPULATION_SIZE              = (FIT_POPULATION_SIZE + NUM_MUTANTS + NUM_OFFSPRING);
+   public static final float DEFAULT_MUTATION_RATE        = 0.25f;
+   public float              MUTATION_RATE                = DEFAULT_MUTATION_RATE;
+   public static final float DEFAULT_RANDOM_MUTATION_RATE = 0.5f;
+   public float              RANDOM_MUTATION_RATE         = DEFAULT_RANDOM_MUTATION_RATE;
+   public static final int   DEFAULT_RANDOM_SEED          = 4517;
+   public int                RANDOM_SEED                  = DEFAULT_RANDOM_SEED;
+   public static final int   SAVE_FREQUENCY               = 1;
+   public static final float INVALID_FITNESS              = 1000.0f;
 
    public void setPopulationSize()
    {
@@ -53,18 +53,18 @@ public class EvolveMoxWorx
    {
       WIDTH               = Utility.loadInt(reader);
       HEIGHT              = Utility.loadInt(reader);
-      NUM_OBSTACLE_TYPES  = Utility.loadInt(reader);
-      NUM_OBSTACLES       = Utility.loadInt(reader);
+      NUM_LANDMARK_TYPES  = Utility.loadInt(reader);
+      NUM_LANDMARKS       = Utility.loadInt(reader);
       NUM_FOODS           = Utility.loadInt(reader);
       TRAINING_SET_SIZE   = Utility.loadInt(reader);
       TRAINING_CELL_NOISE = Utility.loadFloat(reader);
-      if (Utility.loadInt(reader) == Mox.DRIVER_TYPE.METAMORPH_DB.getValue())
+      if (Utility.loadInt(reader) == ForagerMox.DRIVER_TYPE.METAMORPH_DB.getValue())
       {
-         MOX_TEST_DRIVER = Mox.DRIVER_TYPE.METAMORPH_DB;
+         MOX_TEST_DRIVER = ForagerMox.DRIVER_TYPE.METAMORPH_DB;
       }
       else
       {
-         MOX_TEST_DRIVER = Mox.DRIVER_TYPE.METAMORPH_NN;
+         MOX_TEST_DRIVER = ForagerMox.DRIVER_TYPE.METAMORPH_NN;
       }
       FIT_POPULATION_SIZE  = Utility.loadInt(reader);
       NUM_MUTANTS          = Utility.loadInt(reader);
@@ -81,8 +81,8 @@ public class EvolveMoxWorx
    {
       Utility.saveInt(writer, WIDTH);
       Utility.saveInt(writer, HEIGHT);
-      Utility.saveInt(writer, NUM_OBSTACLE_TYPES);
-      Utility.saveInt(writer, NUM_OBSTACLES);
+      Utility.saveInt(writer, NUM_LANDMARK_TYPES);
+      Utility.saveInt(writer, NUM_LANDMARKS);
       Utility.saveInt(writer, NUM_FOODS);
       Utility.saveInt(writer, TRAINING_SET_SIZE);
       Utility.saveFloat(writer, TRAINING_CELL_NOISE);
@@ -101,13 +101,13 @@ public class EvolveMoxWorx
    public static final String Usage =
       "Usage:\n" +
       "  New run:\n" +
-      "    java EvolveMoxWorx\n" +
+      "    java EvolveForage\n" +
       "      -generations <evolution generations>\n" +
       "      -steps <moxen steps>\n" +
       "      -output <evolution output file name>\n" +
       "     [-dimensions <width> <height> (default=" + DEFAULT_WIDTH + "," + DEFAULT_HEIGHT + ")]\n" +
-      "     [-numObstacleTypes <quantity> (default=" + DEFAULT_NUM_OBSTACLE_TYPES + ")]\n" +
-      "     [-numObstacles <quantity> (default=" + DEFAULT_NUM_OBSTACLES + ")]\n" +
+      "     [-numLandmarkTypes <quantity> (default=" + DEFAULT_NUM_LANDMARK_TYPES + ")]\n" +
+      "     [-numLandmarks <quantity> (default=" + DEFAULT_NUM_LANDMARKS + ")]\n" +
       "     [-numFoods <quantity> (default=" + DEFAULT_NUM_FOODS + ")]\n" +
       "     [-trainingSetSize <quantity> (default=1)]\n" +
       "     [-trainingCellNoise <0.0 - 1.0> (probability of changing cell value)]\n" +
@@ -120,18 +120,18 @@ public class EvolveMoxWorx
       "     [-randomSeed <random seed> (default=" + DEFAULT_RANDOM_SEED + ")]\n" +
       "     [-logfile <log file name>]\n" +
       "  Resume run:\n" +
-      "    java EvolveMoxWorx\n" +
+      "    java EvolveForage\n" +
       "      -generations <evolution generations>\n" +
       "      -steps <moxen steps>\n" +
       "      -input <evolution input file name>\n" +
       "      -output <evolution output file name>\n" +
       "     [-logfile <log file name>]\n" +
       "  Print population properties:\n" +
-      "    java EvolveMoxWorx\n" +
+      "    java EvolveForage\n" +
       "      -properties\n" +
       "      -input <evolution input file name>\n" +
       "  Print evolution statistics:\n" +
-      "    java EvolveMoxWorx\n" +
+      "    java EvolveForage\n" +
       "      -statistics\n" +
       "      -input <evolution input file name>";
 
@@ -165,7 +165,7 @@ public class EvolveMoxWorx
    Member[] Population;
 
    // Constructor.
-   public EvolveMoxWorx(String[] args)
+   public EvolveForage(String[] args)
    {
       int i;
 
@@ -176,8 +176,8 @@ public class EvolveMoxWorx
       InputFileName = OutputFileName = LogFileName = null;
       LogWriter     = null;
       boolean gotDimensions         = false;
-      boolean gotNumObstacleTypes   = false;
-      boolean gotNumObstacles       = false;
+      boolean gotNumLandmarkTypes   = false;
+      boolean gotNumLandmarks       = false;
       boolean gotNumFoods           = false;
       boolean gotTrainingSetSize    = false;
       boolean gotTrainingCellNoise  = false;
@@ -257,7 +257,7 @@ public class EvolveMoxWorx
             if (i >= args.length)
             {
                System.err.println("Invalid dimensions option");
-               System.err.println(MoxWorx.Usage);
+               System.err.println(EvolveForage.Usage);
                System.exit(2);
             }
             try
@@ -266,20 +266,20 @@ public class EvolveMoxWorx
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid width option");
-               System.err.println(MoxWorx.Usage);
+               System.err.println(EvolveForage.Usage);
                System.exit(2);
             }
             if (WIDTH < 2)
             {
                System.err.println("Invalid width option");
-               System.err.println(MoxWorx.Usage);
+               System.err.println(EvolveForage.Usage);
                System.exit(2);
             }
             i++;
             if (i >= args.length)
             {
                System.err.println("Invalid dimensions option");
-               System.err.println(MoxWorx.Usage);
+               System.err.println(EvolveForage.Usage);
                System.exit(2);
             }
             try
@@ -288,20 +288,20 @@ public class EvolveMoxWorx
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid height option");
-               System.err.println(MoxWorx.Usage);
+               System.err.println(EvolveForage.Usage);
                System.exit(2);
             }
             if (HEIGHT < 2)
             {
                System.err.println("Invalid height option");
-               System.err.println(MoxWorx.Usage);
+               System.err.println(EvolveForage.Usage);
                System.exit(2);
             }
             gotDimensions = true;
             continue;
          }
 
-         if (args[i].equals("-numObstacleTypes"))
+         if (args[i].equals("-numLandmarkTypes"))
          {
             i++;
             if (i >= args.length)
@@ -309,17 +309,17 @@ public class EvolveMoxWorx
                System.err.println(Usage);
                System.exit(1);
             }
-            NUM_OBSTACLE_TYPES = Integer.parseInt(args[i]);
-            if (NUM_OBSTACLE_TYPES < 1)
+            NUM_LANDMARK_TYPES = Integer.parseInt(args[i]);
+            if (NUM_LANDMARK_TYPES < 1)
             {
                System.err.println(Usage);
                System.exit(1);
             }
-            gotNumObstacleTypes = true;
+            gotNumLandmarkTypes = true;
             continue;
          }
 
-         if (args[i].equals("-numObstacles"))
+         if (args[i].equals("-numLandmarks"))
          {
             i++;
             if (i >= args.length)
@@ -327,13 +327,13 @@ public class EvolveMoxWorx
                System.err.println(Usage);
                System.exit(1);
             }
-            NUM_OBSTACLES = Integer.parseInt(args[i]);
-            if (NUM_OBSTACLES < 0)
+            NUM_LANDMARKS = Integer.parseInt(args[i]);
+            if (NUM_LANDMARKS < 0)
             {
                System.err.println(Usage);
                System.exit(1);
             }
-            gotNumObstacles = true;
+            gotNumLandmarks = true;
             continue;
          }
 
@@ -401,11 +401,11 @@ public class EvolveMoxWorx
             }
             if (args[i].equals("metamorphDB"))
             {
-               MOX_TEST_DRIVER = Mox.DRIVER_TYPE.METAMORPH_DB;
+               MOX_TEST_DRIVER = ForagerMox.DRIVER_TYPE.METAMORPH_DB;
             }
             else if (args[i].equals("metamorphNN"))
             {
-               MOX_TEST_DRIVER = Mox.DRIVER_TYPE.METAMORPH_NN;
+               MOX_TEST_DRIVER = ForagerMox.DRIVER_TYPE.METAMORPH_NN;
             }
             else
             {
@@ -557,7 +557,7 @@ public class EvolveMoxWorx
              (InputFileName == null) ||
              (OutputFileName != null) ||
              (LogFileName != null) ||
-             gotDimensions || gotNumObstacleTypes || gotNumObstacles || gotNumFoods ||
+             gotDimensions || gotNumLandmarkTypes || gotNumLandmarks || gotNumFoods ||
              gotTrainingSetSize || gotTrainingCellNoise || gotMoxTestDriver ||
              gotFitPopulationSize || gotNumMutants || gotNumOffspring ||
              gotMutationRate || gotRandomMutationRate || gotRandomSeed)
@@ -592,7 +592,7 @@ public class EvolveMoxWorx
          if (InputFileName != null)
          {
             if (gotFitPopulationSize || gotNumMutants || gotNumOffspring ||
-                gotDimensions || gotNumObstacleTypes || gotNumObstacles ||
+                gotDimensions || gotNumLandmarkTypes || gotNumLandmarks ||
                 gotNumFoods || gotTrainingSetSize || gotTrainingCellNoise || gotMoxTestDriver ||
                 gotMutationRate || gotRandomMutationRate || gotRandomSeed)
             {
@@ -1110,7 +1110,7 @@ public class EvolveMoxWorx
 
 
       // Evaluate fitness.
-      public void evaluate(int steps, EvolveMoxWorx evolver)
+      public void evaluate(int steps, EvolveForage evolver)
       {
          int t, v, x, y;
 
@@ -1126,18 +1126,18 @@ public class EvolveMoxWorx
          int                 EPOCH_INTERVAL_MULTIPLIER         = (Integer)parameters.get("EPOCH_INTERVAL_MULTIPLIER");
 
          // Create world.
-         MoxWorx moxWorx = new MoxWorx();
-         moxWorx.random = new Random(RANDOM_SEED);
+         Forage forage = new Forage();
+         forage.random = new Random(RANDOM_SEED);
          try
          {
-            moxWorx.initCells(WIDTH, HEIGHT, NUM_OBSTACLE_TYPES, NUM_OBSTACLES, NUM_FOODS);
-            moxWorx.createMoxen(1, NUM_OBSTACLE_TYPES + 1,
-                                NUM_NEIGHBORHOODS,
-                                NEIGHBORHOOD_INITIAL_DIMENSION,
-                                NEIGHBORHOOD_DIMENSION_STRIDE,
-                                NEIGHBORHOOD_DIMENSION_MULTIPLIER,
-                                EPOCH_INTERVAL_STRIDE,
-                                EPOCH_INTERVAL_MULTIPLIER);
+            forage.initCells(WIDTH, HEIGHT, NUM_LANDMARK_TYPES, NUM_LANDMARKS, NUM_FOODS);
+            forage.createMoxen(1, NUM_LANDMARK_TYPES + 1,
+                               NUM_NEIGHBORHOODS,
+                               NEIGHBORHOOD_INITIAL_DIMENSION,
+                               NEIGHBORHOOD_DIMENSION_STRIDE,
+                               NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                               EPOCH_INTERVAL_STRIDE,
+                               EPOCH_INTERVAL_MULTIPLIER);
          }
          catch (Exception e)
          {
@@ -1146,42 +1146,42 @@ public class EvolveMoxWorx
          }
 
          // Train.
-         Random   random   = evolver.Randomizer;
-         MoxCells moxCells = moxWorx.moxCells;
-         int      w        = moxCells.size.width;
-         int      h        = moxCells.size.height;
+         Random      random      = evolver.Randomizer;
+         ForageCells forageCells = forage.forageCells;
+         int         w           = forageCells.size.width;
+         int         h           = forageCells.size.height;
          for (t = 0; t < evolver.TRAINING_SET_SIZE; t++)
          {
-            moxWorx.reset();
+            forage.reset();
             for (x = 0; x < w; x++)
             {
                for (y = 0; y < h; y++)
                {
                   if (random.nextFloat() < evolver.TRAINING_CELL_NOISE)
                   {
-                     if ((moxCells.cells[x][y] == MoxCells.EMPTY_CELL_VALUE) ||
-                         (moxCells.cells[x][y] >= MoxCells.OBSTACLE_CELLS_BEGIN_VALUE))
+                     if ((forageCells.cells[x][y] == MoxWorx.EMPTY_CELL_VALUE) ||
+                         (forageCells.cells[x][y] >= ForageCells.LANDMARK_CELLS_BEGIN_VALUE))
                      {
-                        v = random.nextInt(NUM_OBSTACLE_TYPES + 1);
+                        v = random.nextInt(NUM_LANDMARK_TYPES + 1);
                         if (v == 0)
                         {
-                           moxCells.cells[x][y] = MoxCells.EMPTY_CELL_VALUE;
+                           forageCells.cells[x][y] = MoxWorx.EMPTY_CELL_VALUE;
                         }
                         else
                         {
-                           moxCells.cells[x][y] = v + MoxCells.OBSTACLE_CELLS_BEGIN_VALUE - 1;
+                           forageCells.cells[x][y] = v + ForageCells.LANDMARK_CELLS_BEGIN_VALUE - 1;
                         }
                      }
                   }
                }
             }
-            for (Mox mox : moxWorx.moxen)
+            for (ForagerMox mox : forage.moxen)
             {
-               mox.driver = Mox.DRIVER_TYPE.AUTOPILOT.getValue();
+               mox.driver = ForagerMox.DRIVER_TYPE.AUTOPILOT.getValue();
             }
             try
             {
-               moxWorx.run(steps);
+               forage.run(steps);
             }
             catch (Exception e)
             {
@@ -1191,14 +1191,14 @@ public class EvolveMoxWorx
          }
 
          // Test.
-         moxWorx.reset();
-         for (Mox mox : moxWorx.moxen)
+         forage.reset();
+         for (ForagerMox mox : forage.moxen)
          {
             mox.driver = MOX_TEST_DRIVER.getValue();
          }
          try
          {
-            fitness = (float)moxWorx.run(steps);
+            fitness = (float)forage.run(steps);
          }
          catch (Exception e)
          {
@@ -1264,9 +1264,9 @@ public class EvolveMoxWorx
    // Main.
    public static void main(String[] args)
    {
-      EvolveMoxWorx evolveMoxWorx = new EvolveMoxWorx(args);
+      EvolveForage evolveForage = new EvolveForage(args);
 
-      evolveMoxWorx.run();
+      evolveForage.run();
       System.exit(0);
    }
 }

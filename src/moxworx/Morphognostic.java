@@ -166,9 +166,9 @@ public class Morphognostic
                             (y4 < (s.dy + s.dimension)))
                         {
                            int i = t;
-                           if (i >= MoxCells.OBSTACLE_CELLS_BEGIN_VALUE)
+                           if (i >= landmarkBeginValue)
                            {
-                              i -= MoxCells.OBSTACLE_CELLS_BEGIN_VALUE;
+                              i -= landmarkBeginValue;
                               i++;
                            }
                            s.typeDensities[i] += 1.0f;
@@ -288,18 +288,19 @@ public class Morphognostic
    // Orientation.
    public int orientation;
 
-   // Number of landmark types.
+   // Landmarks.
+   public int landmarkBeginValue;
    public int numLandmarkTypes;
 
    // Constructor.
-   public Morphognostic(int orientation, int numLandmarkTypes)
+   public Morphognostic(int orientation, int landmarkBeginValue, int numLandmarkTypes)
    {
-      init(orientation, numLandmarkTypes);
+      init(orientation, landmarkBeginValue, numLandmarkTypes);
    }
 
 
    // Construct with parameters.
-   public Morphognostic(int orientation, int numLandmarkTypes,
+   public Morphognostic(int orientation, int landmarkBeginValue, int numLandmarkTypes,
                         int NUM_NEIGHBORHOODS,
                         int NEIGHBORHOOD_INITIAL_DIMENSION,
                         int NEIGHBORHOOD_DIMENSION_STRIDE,
@@ -314,14 +315,15 @@ public class Morphognostic
       this.NEIGHBORHOOD_DIMENSION_MULTIPLIER = NEIGHBORHOOD_DIMENSION_MULTIPLIER;
       this.EPOCH_INTERVAL_STRIDE             = EPOCH_INTERVAL_STRIDE;
       this.EPOCH_INTERVAL_MULTIPLIER         = EPOCH_INTERVAL_MULTIPLIER;
-      init(orientation, numLandmarkTypes);
+      init(orientation, landmarkBeginValue, numLandmarkTypes);
    }
 
 
-   public void init(int orientation, int numLandmarkTypes)
+   public void init(int orientation, int landmarkBeginValue, int numLandmarkTypes)
    {
-      this.orientation      = orientation;
-      this.numLandmarkTypes = numLandmarkTypes;
+      this.orientation        = orientation;
+      this.landmarkBeginValue = landmarkBeginValue;
+      this.numLandmarkTypes   = numLandmarkTypes;
 
       // Create neighborhoods.
       neighborhoods = new Vector<Neighborhood>();
@@ -404,6 +406,7 @@ public class Morphognostic
       Utility.saveInt(writer, EPOCH_INTERVAL_STRIDE);
       Utility.saveInt(writer, EPOCH_INTERVAL_MULTIPLIER);
       Utility.saveInt(writer, orientation);
+      Utility.saveInt(writer, landmarkBeginValue);
       Utility.saveInt(writer, numLandmarkTypes);
       for (Neighborhood n : neighborhoods)
       {
@@ -440,9 +443,10 @@ public class Morphognostic
       int             NEIGHBORHOOD_DIMENSION_MULTIPLIER = Utility.loadInt(reader);
       int             EPOCH_INTERVAL_STRIDE             = Utility.loadInt(reader);
       int             EPOCH_INTERVAL_MULTIPLIER         = Utility.loadInt(reader);
-      int             orientation      = Utility.loadInt(reader);
-      int             numLandmarkTypes = Utility.loadInt(reader);
-      Morphognostic   m = new Morphognostic(orientation, numLandmarkTypes,
+      int             orientation        = Utility.loadInt(reader);
+      int             landmarkBeginValue = Utility.loadInt(reader);
+      int             numLandmarkTypes   = Utility.loadInt(reader);
+      Morphognostic   m = new Morphognostic(orientation, landmarkBeginValue, numLandmarkTypes,
                                             NUM_NEIGHBORHOODS,
                                             NEIGHBORHOOD_INITIAL_DIMENSION,
                                             NEIGHBORHOOD_DIMENSION_STRIDE,
@@ -479,7 +483,7 @@ public class Morphognostic
    // Clone.
    public Morphognostic clone()
    {
-      Morphognostic m = new Morphognostic(orientation, numLandmarkTypes,
+      Morphognostic m = new Morphognostic(orientation, landmarkBeginValue, numLandmarkTypes,
                                           NUM_NEIGHBORHOODS,
                                           NEIGHBORHOOD_INITIAL_DIMENSION,
                                           NEIGHBORHOOD_DIMENSION_STRIDE,

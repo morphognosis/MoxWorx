@@ -15,10 +15,8 @@ public class SectorDisplay extends JFrame implements Runnable
 {
    private static final long serialVersionUID = 0L;
 
-   // Targets.
-   MoxDashboard.MorphognosticPanel dashboard;
-   Mox           mox;
-   Morphognostic morphognostic;
+   // Dashboard.
+   MorphognosticDashboard dashboard;
 
    // Neighborhood and sector.
    int neighborhoodIndex;
@@ -39,18 +37,16 @@ public class SectorDisplay extends JFrame implements Runnable
    DISPLAY_MODE displayMode;
 
    // Constructor.
-   public SectorDisplay(MoxDashboard.MorphognosticPanel dashboard,
-                        Mox mox, int neighborhoodIndex, int sectorXindex, int sectorYindex)
+   public SectorDisplay(MorphognosticDashboard dashboard,
+                        int neighborhoodIndex, int sectorXindex, int sectorYindex)
    {
       this.dashboard         = dashboard;
-      this.mox               = mox;
-      morphognostic          = mox.morphognostic;
       this.neighborhoodIndex = neighborhoodIndex;
       this.sectorXindex      = sectorXindex;
       this.sectorYindex      = sectorYindex;
-      sector = morphognostic.neighborhoods.get(neighborhoodIndex).sectors[sectorXindex][sectorYindex];
+      sector = dashboard.morphognostic.neighborhoods.get(neighborhoodIndex).sectors[sectorXindex][sectorYindex];
 
-      setTitle("M=" + mox.id + " N=" + neighborhoodIndex +
+      setTitle("M=" + dashboard.moxID + " N=" + neighborhoodIndex +
                " S=[" + sectorXindex + "," + sectorYindex + "]");
       addWindowListener(new WindowAdapter()
                         {
@@ -152,17 +148,17 @@ public class SectorDisplay extends JFrame implements Runnable
       if (displayMode == DISPLAY_MODE.DENSITIES)
       {
          // Draw type density histogram.
-         int n = morphognostic.numLandmarkTypes;
+         int n = dashboard.morphognostic.numLandmarkTypes;
          int w = imageSize.width / n;
          for (int i = 0, x = 0; i < n; i++, x += w)
          {
-            if (i == MoxCells.EMPTY_CELL_VALUE)
+            if (i == MoxWorx.EMPTY_CELL_VALUE)
             {
-               imageGraphics.setColor(MoxCells.EMPTY_CELL_COLOR);
+               imageGraphics.setColor(MoxWorx.EMPTY_CELL_COLOR);
             }
             else
             {
-               random.setSeed(i + MoxCells.OBSTACLE_CELLS_BEGIN_VALUE - 1);
+               random.setSeed(i + NestCells.LANDMARK_CELLS_BEGIN_VALUE - 1);
                float r     = random.nextFloat();
                float g     = random.nextFloat();
                float b     = random.nextFloat();
@@ -198,8 +194,8 @@ public class SectorDisplay extends JFrame implements Runnable
                                          (int)cellHeight + 1);
                   break;
 
-               case MoxCells.EMPTY_CELL_VALUE:
-                  imageGraphics.setColor(MoxCells.EMPTY_CELL_COLOR);
+               case MoxWorx.EMPTY_CELL_VALUE:
+                  imageGraphics.setColor(MoxWorx.EMPTY_CELL_COLOR);
                   imageGraphics.fillRect(x2, y2, (int)cellWidth + 1,
                                          (int)cellHeight + 1);
                   break;

@@ -1,6 +1,6 @@
 // For conditions of distribution and use, see copyright notice in MoxWorx.java
 
-// Mox: mophognosis organism.
+// Foraging mox: mophognosis organism.
 
 package moxworx;
 
@@ -18,19 +18,18 @@ import weka.core.Instances;
 import weka.core.Utils;
 import weka.core.converters.ArffSaver;
 
-// Mox.
-public class Mox
+public class ForagerMox
 {
    // Properties.
-   public int      id;
-   public int      x, y;
-   public int      direction;
-   public MoxCells moxCells;
-   public int      numLandmarkTypes;
-   public int      x2, y2;
-   public int      direction2;
-   public int      driver;
-   public int      driverResponse;
+   public int         id;
+   public int         x, y;
+   public int         direction;
+   public ForageCells forageCells;
+   public int         numLandmarkTypes;
+   public int         x2, y2;
+   public int         direction2;
+   public int         driver;
+   public int         driverResponse;
 
    // Current morphognostic.
    public Morphognostic morphognostic;
@@ -60,7 +59,7 @@ public class Mox
    public static final int NUM_RESPONSES = 5;
 
    // Navigation.
-   public boolean[][] obstacleMap;
+   public boolean[][] landmarkMap;
    public int         maxLandmarkEventAge;
    public class LandmarkEvent
    {
@@ -101,13 +100,13 @@ public class Mox
    }
 
    // Constructors.
-   public Mox(int id, int x, int y, int direction, int numLandmarkTypes, MoxCells moxCells)
+   public ForagerMox(int id, int x, int y, int direction, int numLandmarkTypes, ForageCells forageCells)
    {
       this.id               = id;
-      this.moxCells         = moxCells;
+      this.forageCells      = forageCells;
       this.numLandmarkTypes = numLandmarkTypes;
       init(x, y, direction);
-      morphognostic = new Morphognostic(direction, numLandmarkTypes);
+      morphognostic = new Morphognostic(direction, ForageCells.LANDMARK_CELLS_BEGIN_VALUE, numLandmarkTypes);
       Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(morphognostic.NUM_NEIGHBORHOODS - 1);
       maxLandmarkEventAge = n.epoch + n.duration - 1;
       metamorphs          = new ArrayList<Metamorph>();
@@ -115,19 +114,19 @@ public class Mox
    }
 
 
-   public Mox(int id, int x, int y, int direction, int numLandmarkTypes, MoxCells moxCells,
-              int NUM_NEIGHBORHOODS,
-              int NEIGHBORHOOD_INITIAL_DIMENSION,
-              int NEIGHBORHOOD_DIMENSION_STRIDE,
-              int NEIGHBORHOOD_DIMENSION_MULTIPLIER,
-              int EPOCH_INTERVAL_STRIDE,
-              int EPOCH_INTERVAL_MULTIPLIER)
+   public ForagerMox(int id, int x, int y, int direction, int numLandmarkTypes, ForageCells forageCells,
+                     int NUM_NEIGHBORHOODS,
+                     int NEIGHBORHOOD_INITIAL_DIMENSION,
+                     int NEIGHBORHOOD_DIMENSION_STRIDE,
+                     int NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                     int EPOCH_INTERVAL_STRIDE,
+                     int EPOCH_INTERVAL_MULTIPLIER)
    {
       this.id               = id;
-      this.moxCells         = moxCells;
+      this.forageCells      = forageCells;
       this.numLandmarkTypes = numLandmarkTypes;
       init(x, y, direction);
-      morphognostic = new Morphognostic(direction, numLandmarkTypes,
+      morphognostic = new Morphognostic(direction, ForageCells.LANDMARK_CELLS_BEGIN_VALUE, numLandmarkTypes,
                                         NUM_NEIGHBORHOODS,
                                         NEIGHBORHOOD_INITIAL_DIMENSION,
                                         NEIGHBORHOOD_DIMENSION_STRIDE,
@@ -141,13 +140,13 @@ public class Mox
    }
 
 
-   public Mox(MoxCells moxCells)
+   public ForagerMox(ForageCells forageCells)
    {
-      id               = -1;
-      this.moxCells    = moxCells;
+      id = -1;
+      this.forageCells = forageCells;
       numLandmarkTypes = 1;
       init();
-      morphognostic = new Morphognostic(direction, numLandmarkTypes);
+      morphognostic = new Morphognostic(direction, ForageCells.LANDMARK_CELLS_BEGIN_VALUE, numLandmarkTypes);
       Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(morphognostic.NUM_NEIGHBORHOODS - 1);
       maxLandmarkEventAge = n.epoch + n.duration - 1;
       metamorphs          = new ArrayList<Metamorph>();
@@ -169,12 +168,12 @@ public class Mox
       response       = WAIT;
       driver         = DRIVER_TYPE.METAMORPH_DB.getValue();
       driverResponse = WAIT;
-      obstacleMap    = new boolean[moxCells.size.width][moxCells.size.height];
-      for (int i = 0; i < moxCells.size.width; i++)
+      landmarkMap    = new boolean[forageCells.size.width][forageCells.size.height];
+      for (int i = 0; i < forageCells.size.width; i++)
       {
-         for (int j = 0; j < moxCells.size.height; j++)
+         for (int j = 0; j < forageCells.size.height; j++)
          {
-            obstacleMap[i][j] = false;
+            landmarkMap[i][j] = false;
          }
       }
       landmarkEvents = new Vector<LandmarkEvent>();
@@ -200,11 +199,11 @@ public class Mox
       }
       response       = WAIT;
       driverResponse = WAIT;
-      for (int i = 0; i < moxCells.size.width; i++)
+      for (int i = 0; i < forageCells.size.width; i++)
       {
-         for (int j = 0; j < moxCells.size.height; j++)
+         for (int j = 0; j < forageCells.size.height; j++)
          {
-            obstacleMap[i][j] = false;
+            landmarkMap[i][j] = false;
          }
       }
       landmarkEvents.clear();
@@ -305,13 +304,13 @@ public class Mox
       this.sensors = sensors;
 
       // Update morphognostic.
-      landmarkEvents.add(new LandmarkEvent(moxCells.cells[fx][fy], fx, fy, eventTime));
+      landmarkEvents.add(new LandmarkEvent(forageCells.cells[fx][fy], fx, fy, eventTime));
       if ((eventTime - landmarkEvents.get(0).time) > maxLandmarkEventAge)
       {
          landmarkEvents.remove(0);
       }
-      int w = moxCells.size.width;
-      int h = moxCells.size.height;
+      int w = forageCells.size.width;
+      int h = forageCells.size.height;
       int a = maxLandmarkEventAge + 1;
       int landmarks[][][] = new int[w][h][a];
       for (int x = 0; x < w; x++)
@@ -326,13 +325,13 @@ public class Mox
       }
       for (LandmarkEvent e : landmarkEvents)
       {
-         if (e.value >= MoxCells.OBSTACLE_CELLS_BEGIN_VALUE)
+         if (e.value >= ForageCells.LANDMARK_CELLS_BEGIN_VALUE)
          {
             landmarks[e.x][e.y][eventTime - e.time] = e.value;
          }
          else
          {
-            landmarks[e.x][e.y][eventTime - e.time] = MoxCells.EMPTY_CELL_VALUE;
+            landmarks[e.x][e.y][eventTime - e.time] = MoxWorx.EMPTY_CELL_VALUE;
          }
       }
       morphognostic.update(landmarks, x, y);
@@ -413,8 +412,8 @@ public class Mox
       int fx, fy;
       int left, right;
       int r;
-      int w = moxCells.size.width;
-      int h = moxCells.size.height;
+      int w = forageCells.size.width;
+      int h = forageCells.size.height;
 
       ArrayList<FoodSearch> open   = new ArrayList<FoodSearch>();
       ArrayList<FoodSearch> closed = new ArrayList<FoodSearch>();
@@ -471,7 +470,7 @@ public class Mox
             right = Orientation.EAST;
             break;
          }
-         if (moxCells.cells[fx][fy] == MoxCells.FOOD_CELL_VALUE)
+         if (forageCells.cells[fx][fy] == ForageCells.FOOD_CELL_VALUE)
          {
             response = current.response;
             return;
@@ -481,7 +480,7 @@ public class Mox
          {
             r = FORWARD;
          }
-         if (!obstacleMap[fx][fy])
+         if (!landmarkMap[fx][fy])
          {
             next  = new FoodSearch(r, fx, fy, current.dir, current.depth + 1);
             found = false;
@@ -556,7 +555,7 @@ public class Mox
          this.y        = y;
          this.dir      = dir;
          this.depth    = depth;
-         foodDist      = depth + moxCells.foodDist(x, y);
+         foodDist      = depth + forageCells.foodDist(x, y);
       }
 
 

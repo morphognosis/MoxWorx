@@ -3,10 +3,10 @@ do
   #echo dimensions=$d
   for t in 1 2 4
   do
-    #echo obstacle_types=$t
+    #echo landmark_types=$t
     for o in 20 30 40
     do
-      #echo obstacles=$o
+      #echo landmarks=$o
       for f in 1 2 3
       do
         #echo foods=$f
@@ -15,7 +15,7 @@ do
         do
           #echo random_seed=$r
           l="d${d}_t${t}_o${o}_f${f}_r${r}"
-          java -cp ".;../lib/weka.jar" moxworx.EvolveMoxWorx -generations 10 -steps 500 -dimensions $d $d -numFoods $f -numObstacles $o -numObstacleTypes $t -output evolve_${l}.out -logfile evolve_${l}.log -randomSeed $r
+          java -cp ".;../lib/weka.jar" moxworx.EvolveMoxWorx -generations 10 -steps 500 -dimensions $d $d -numFoods $f -numLandmarks $o -numLandmarkTypes $t -output evolve_${l}.out -logfile evolve_${l}.log -randomSeed $r
           x=`cat evolve_${l}.log | grep -A 1 Select | tail -1 | cut -d"=" -f3 | cut -d"," -f1 | cut -d"." -f1`
           s=$(( $s + $x ))
           if (( $r == 10 ))
