@@ -1,1 +1,1 @@
-./moxworx.sh -dashboard -load run.out
+./moxworx.sh -display -load run.out

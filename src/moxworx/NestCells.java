@@ -11,32 +11,34 @@ public class NestCells
 {
    // Cell values.
    // See MoxWorx.EMPTY_CELL_VALUE.
-   public static final int FOOD_CELL_VALUE            = 1;
-   public static final int MOX_CELL_VALUE             = 2;
-   public static final int LANDMARK_CELLS_BEGIN_VALUE = 3;
-
-   // Colors.
-   // See MoxWorx.EMPTY_CELL_COLOR.
-   public static final Color FOOD_CELL_COLOR = Color.GREEN;
-   public static final Color MOX_CELL_COLOR  = Color.BLUE;
+   public static final int STONE_CELL_VALUE     = 1;
+   public static final int NUM_STONE_VALUES     = 2;
+   public static final int NUM_ELEVATION_VALUES = 4;
 
    // Cells.
-   public Dimension size;
-   public int[][]   cells;
-   public int[][]   restoreCells;
+   public static final int CELL_DIMENSIONS      = 2;
+   public static final int STONE_CELL_INDEX     = 0;
+   public static final int ELEVATION_CELL_INDEX = 1;
+   public Dimension        size;
+   public int[][][]        cells;
+   public int[][][]        restoreCells;
 
    // Constructors.
    public NestCells(Dimension size)
    {
       // Create cells.
       this.size    = size;
-      cells        = new int[size.width][size.height];
-      restoreCells = new int[size.width][size.height];
+      cells        = new int[size.width][size.height][CELL_DIMENSIONS];
+      restoreCells = new int[size.width][size.height][CELL_DIMENSIONS];
       for (int x = 0; x < size.width; x++)
       {
          for (int y = 0; y < size.height; y++)
          {
-            cells[x][y] = restoreCells[x][y] = 0;
+            for (int d = 0; d < CELL_DIMENSIONS; d++)
+            {
+               cells[x][y][d]        = MoxWorx.EMPTY_CELL_VALUE;
+               restoreCells[x][y][d] = MoxWorx.EMPTY_CELL_VALUE;
+            }
          }
       }
    }
@@ -62,30 +64,8 @@ public class NestCells
    }
 
 
-   // Count existing food.
-   public int countFood()
-   {
-      int x, y;
-      int w     = size.width;
-      int h     = size.height;
-      int count = 0;
-
-      for (x = 0; x < w; x++)
-      {
-         for (y = 0; y < h; y++)
-         {
-            if (cells[x][y] == FOOD_CELL_VALUE)
-            {
-               count++;
-            }
-         }
-      }
-      return(count);
-   }
-
-
-   // Distance to nearest food.
-   int foodDist(int x, int y)
+   // Distance to nearest stone.
+   int stoneDist(int x, int y)
    {
       int x2, y2, d, d2;
       int w = size.width;
@@ -96,7 +76,7 @@ public class NestCells
       {
          for (y2 = 0; y2 < h; y2++)
          {
-            if (cells[x2][y2] == FOOD_CELL_VALUE)
+            if (cells[x2][y2][STONE_CELL_INDEX] == STONE_CELL_VALUE)
             {
                d2 = cellDist(x, y, x2, y2);
                if ((d == -1) || (d2 < d))
@@ -147,60 +127,31 @@ public class NestCells
    // Save cells.
    public void save(FileOutputStream output) throws IOException
    {
-      int n, x, y;
+      int x, y;
 
       PrintWriter writer = new PrintWriter(output);
 
       Utility.saveInt(writer, size.width);
       Utility.saveInt(writer, size.height);
-      n = 0;
-      for (x = 0; x < size.width; x++)
-      {
-         for (y = 0; y < size.height; y++)
-         {
-            if (cells[x][y] > 0)
-            {
-               n++;
-            }
-         }
-      }
-      Utility.saveInt(writer, n);
 
       for (x = 0; x < size.width; x++)
       {
          for (y = 0; y < size.height; y++)
          {
-            if (cells[x][y] > 0)
+            for (int d = 0; d < CELL_DIMENSIONS; d++)
             {
-               Utility.saveInt(writer, x);
-               Utility.saveInt(writer, y);
-               Utility.saveInt(writer, cells[x][y]);
+               Utility.saveInt(writer, cells[x][y][d]);
             }
          }
       }
-
-      n = 0;
-      for (x = 0; x < size.width; x++)
-      {
-         for (y = 0; y < size.height; y++)
-         {
-            if (restoreCells[x][y] > 0)
-            {
-               n++;
-            }
-         }
-      }
-      Utility.saveInt(writer, n);
 
       for (x = 0; x < size.width; x++)
       {
          for (y = 0; y < size.height; y++)
          {
-            if (restoreCells[x][y] > 0)
+            for (int d = 0; d < CELL_DIMENSIONS; d++)
             {
-               Utility.saveInt(writer, x);
-               Utility.saveInt(writer, y);
-               Utility.saveInt(writer, restoreCells[x][y]);
+               Utility.saveInt(writer, restoreCells[x][y][d]);
             }
          }
       }
@@ -227,7 +178,7 @@ public class NestCells
    // Load cells.
    public void load(FileInputStream input) throws IOException
    {
-      int w, h, n, x, y;
+      int w, h, x, y;
 
       DataInputStream reader = new DataInputStream(input);
 
@@ -236,40 +187,30 @@ public class NestCells
 
       size.width   = w;
       size.height  = h;
-      cells        = new int[size.width][size.height];
-      restoreCells = new int[size.width][size.height];
+      cells        = new int[size.width][size.height][2];
+      restoreCells = new int[size.width][size.height][2];
       clear();
 
-      n = Utility.loadInt(reader);
-      for (int i = 0; i < n; i++)
+      for (x = 0; x < size.width; x++)
       {
-         x = Utility.loadInt(reader);
-         y = Utility.loadInt(reader);
-         if ((x < 0) || (x >= w))
+         for (y = 0; y < size.height; y++)
          {
-            throw (new IOException("Invalid x value " + x));
+            for (int d = 0; d < CELL_DIMENSIONS; d++)
+            {
+               cells[x][y][d] = Utility.loadInt(reader);
+            }
          }
-         if ((y < 0) || (y >= h))
-         {
-            throw (new IOException("Invalid y value " + y));
-         }
-         cells[x][y] = Utility.loadInt(reader);
       }
 
-      n = Utility.loadInt(reader);
-      for (int i = 0; i < n; i++)
+      for (x = 0; x < size.width; x++)
       {
-         x = Utility.loadInt(reader);
-         y = Utility.loadInt(reader);
-         if ((x < 0) || (x >= w))
+         for (y = 0; y < size.height; y++)
          {
-            throw (new IOException("Invalid x value " + x));
+            for (int d = 0; d < CELL_DIMENSIONS; d++)
+            {
+               restoreCells[x][y][d] = Utility.loadInt(reader);
+            }
          }
-         if ((y < 0) || (y >= h))
-         {
-            throw (new IOException("Invalid y value " + y));
-         }
-         restoreCells[x][y] = Utility.loadInt(reader);
       }
    }
 
@@ -283,7 +224,10 @@ public class NestCells
       {
          for (y = 0; y < size.height; y++)
          {
-            cells[x][y] = 0;
+            for (int d = 0; d < CELL_DIMENSIONS; d++)
+            {
+               cells[x][y][d] = MoxWorx.EMPTY_CELL_VALUE;
+            }
          }
       }
    }
@@ -298,7 +242,10 @@ public class NestCells
       {
          for (y = 0; y < size.height; y++)
          {
-            restoreCells[x][y] = cells[x][y];
+            for (int d = 0; d < CELL_DIMENSIONS; d++)
+            {
+               restoreCells[x][y][d] = cells[x][y][d];
+            }
          }
       }
    }
@@ -313,7 +260,10 @@ public class NestCells
       {
          for (y = 0; y < size.height; y++)
          {
-            cells[x][y] = restoreCells[x][y];
+            for (int d = 0; d < CELL_DIMENSIONS; d++)
+            {
+               cells[x][y][d] = restoreCells[x][y][d];
+            }
          }
       }
    }

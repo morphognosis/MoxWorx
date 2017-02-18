@@ -1,6 +1,6 @@
 // For conditions of distribution and use, see copyright notice in MoxWorx.java
 
-//  Morphognostic dashboard.
+//  Morphognostic display.
 
 package moxworx;
 
@@ -10,7 +10,7 @@ import java.util.Random;
 import java.util.Vector;
 import javax.swing.*;
 
-class MorphognosticDashboard extends JPanel implements ItemListener, ActionListener
+class MorphognosticDisplay extends JPanel implements ItemListener, ActionListener
 {
    private static final long serialVersionUID = 0L;
 
@@ -28,7 +28,7 @@ class MorphognosticDashboard extends JPanel implements ItemListener, ActionListe
    JButton               hideButton;
 
    // Constructor.
-   public MorphognosticDashboard(int moxID, Morphognostic morphognostic)
+   public MorphognosticDisplay(int moxID, Morphognostic morphognostic)
    {
       this.moxID         = moxID;
       this.morphognostic = morphognostic;

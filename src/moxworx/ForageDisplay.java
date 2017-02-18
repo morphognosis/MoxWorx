@@ -1,6 +1,6 @@
 // For conditions of distribution and use, see copyright notice in MoxWorx.java
 
-// Forage dashboard.
+// Forage display.
 
 package moxworx;
 
@@ -11,7 +11,7 @@ import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.event.*;
 
-public class ForageDashboard extends JFrame
+public class ForageDisplay extends JFrame
 {
    private static final long serialVersionUID = 0L;
 
@@ -29,7 +29,7 @@ public class ForageDashboard extends JFrame
    int numLandmarkTypes;
 
    // Dimensions.
-   static final Dimension DASHBOARD_SIZE = new Dimension(600, 700);
+   static final Dimension DISPLAY_SIZE = new Dimension(600, 700);
 
    // Mox display.
    MoxDisplay display;
@@ -46,7 +46,7 @@ public class ForageDashboard extends JFrame
    boolean quit;
 
    // Constructors.
-   public ForageDashboard(ForageCells forageCells, int numLandmarkTypes, ArrayList<ForagerMox> moxen)
+   public ForageDisplay(ForageCells forageCells, int numLandmarkTypes, ArrayList<ForagerMox> moxen)
    {
       this.forageCells      = forageCells;
       this.numLandmarkTypes = numLandmarkTypes;
@@ -56,7 +56,7 @@ public class ForageDashboard extends JFrame
    }
 
 
-   public ForageDashboard(ForageCells forageCells, int numLandmarkTypes)
+   public ForageDisplay(ForageCells forageCells, int numLandmarkTypes)
    {
       this.forageCells      = forageCells;
       this.numLandmarkTypes = numLandmarkTypes;
@@ -70,7 +70,7 @@ public class ForageDashboard extends JFrame
    // Initialize.
    void init()
    {
-      // Set up dashboard.
+      // Set up display.
       setTitle("Forage");
       addWindowListener(new WindowAdapter()
                         {
@@ -81,13 +81,13 @@ public class ForageDashboard extends JFrame
                            }
                         }
                         );
-      setBounds(0, 0, DASHBOARD_SIZE.width, DASHBOARD_SIZE.height);
+      setBounds(0, 0, DISPLAY_SIZE.width, DISPLAY_SIZE.height);
       JPanel basePanel = (JPanel)getContentPane();
       basePanel.setLayout(new BorderLayout());
 
       // Create display.
-      Dimension displaySize = new Dimension(DASHBOARD_SIZE.width,
-                                            (int)((double)DASHBOARD_SIZE.height * .8));
+      Dimension displaySize = new Dimension(DISPLAY_SIZE.width,
+                                            (int)((double)DISPLAY_SIZE.height * .8));
       display = new MoxDisplay(displaySize);
       basePanel.add(display, BorderLayout.NORTH);
 
@@ -95,7 +95,7 @@ public class ForageDashboard extends JFrame
       controls = new MoxControls();
       basePanel.add(controls, BorderLayout.SOUTH);
 
-      // Make dashboard visible.
+      // Make display visible.
       pack();
       setCenterLocation();
       setVisible(true);
@@ -147,7 +147,7 @@ public class ForageDashboard extends JFrame
    }
 
 
-   // Update dashboard.
+   // Update display.
    public void update(int steps)
    {
       controls.updateStepCounter(steps);
@@ -238,8 +238,6 @@ public class ForageDashboard extends JFrame
 
       // Last cell visited by mouse.
       private int lastX = -1;
-
-      // Last cell visited by mouse.
       private int lastY = -1;
 
       // Constructor.
@@ -254,7 +252,7 @@ public class ForageDashboard extends JFrame
 
 
       // Update display.
-      void update()
+      synchronized void update()
       {
          int   x;
          int   y;
@@ -288,7 +286,6 @@ public class ForageDashboard extends JFrame
          cellHeight = (float)canvasSize.height / (float)forageCells.size.height;
 
          // Draw cells.
-         Random random = new Random();
          for (x = x2 = 0; x < forageCells.size.width;
               x++, x2 = (int)(cellWidth * (double)x))
          {
@@ -300,8 +297,7 @@ public class ForageDashboard extends JFrame
                {
                case MoxWorx.EMPTY_CELL_VALUE:
                   imageGraphics.setColor(MoxWorx.EMPTY_CELL_COLOR);
-                  imageGraphics.fillRect(x2, y2, (int)cellWidth + 1,
-                                         (int)cellHeight + 1);
+                  imageGraphics.fillRect(x2, y2, (int)cellWidth + 1, (int)cellHeight + 1);
                   break;
 
                case ForageCells.FOOD_CELL_VALUE:
@@ -309,19 +305,14 @@ public class ForageDashboard extends JFrame
                   imageGraphics.fillRect(x2 + 1, y2 + 1, (int)cellWidth - 1,
                                          (int)cellHeight - 1);
                   imageGraphics.setColor(ForageCells.FOOD_CELL_COLOR);
-                  imageGraphics.fillOval(x2, y2, (int)cellWidth,
-                                         (int)cellHeight);
+                  imageGraphics.fillOval(x2, y2, (int)cellWidth, (int)cellHeight);
                   break;
 
                default:
-                  random.setSeed(forageCells.cells[x][y]);
-                  float r     = random.nextFloat();
-                  float g     = random.nextFloat();
-                  float b     = random.nextFloat();
-                  Color color = new Color(r, g, b);
+                  Color color = SectorDisplay.getEventColor(0, forageCells.cells[x][y] -
+                                                            ForageCells.LANDMARK_CELLS_BEGIN_VALUE + 1);
                   imageGraphics.setColor(color);
-                  imageGraphics.fillRect(x2, y2, (int)cellWidth + 1,
-                                         (int)cellHeight + 1);
+                  imageGraphics.fillRect(x2, y2, (int)cellWidth + 1, (int)cellHeight + 1);
                   break;
                }
             }
@@ -330,21 +321,17 @@ public class ForageDashboard extends JFrame
          // Draw grid.
          imageGraphics.setColor(Color.black);
          y2 = canvasSize.height;
-
          for (x = 1, x2 = (int)cellWidth; x < forageCells.size.width;
               x++, x2 = (int)(cellWidth * (double)x))
          {
             imageGraphics.drawLine(x2, 0, x2, y2);
          }
-
          x2 = canvasSize.width;
-
          for (y = 1, y2 = (int)cellHeight; y < forageCells.size.height;
               y++, y2 = (int)(cellHeight * (double)y))
          {
             imageGraphics.drawLine(0, y2, x2, y2);
          }
-
          imageGraphics.setColor(Color.black);
 
          // Draw moxen.
@@ -355,8 +342,7 @@ public class ForageDashboard extends JFrame
          {
             mox = (ForagerMox)moxen.get(i);
             x2  = (int)(cellWidth * (double)mox.x);
-            y2  = (int)(cellHeight *
-                        (double)(forageCells.size.height - (mox.y + 1)));
+            y2  = (int)(cellHeight * (double)(forageCells.size.height - (mox.y + 1)));
 
             // Highlight selected mox?
             if (i == currentMox)
@@ -367,8 +353,7 @@ public class ForageDashboard extends JFrame
             {
                imageGraphics.setColor(Color.white);
             }
-            imageGraphics.fillRect(x2 + 1, y2 + 1, (int)cellWidth - 1,
-                                   (int)cellHeight - 1);
+            imageGraphics.fillRect(x2 + 1, y2 + 1, (int)cellWidth - 1, (int)cellHeight - 1);
             imageGraphics.setColor(ForageCells.MOX_CELL_COLOR);
             if (mox.direction == Orientation.NORTH)
             {
@@ -476,13 +461,20 @@ public class ForageDashboard extends JFrame
                if (!moxSelected)
                {
                   int n = ForageCells.LANDMARK_CELLS_BEGIN_VALUE + numLandmarkTypes;
-                  forageCells.cells[x][y] = (forageCells.cells[x][y] + 1) % n;
-                  if (forageCells.cells[x][y] == MoxWorx.EMPTY_CELL_VALUE)
+                  if (n > 1)
                   {
-                     for (i = 0; i < moxen.size(); i++)
+                     forageCells.cells[x][y] = (forageCells.cells[x][y] + 1) % n;
+                     if (forageCells.cells[x][y] == ForageCells.MOX_CELL_VALUE)
                      {
-                        mox = moxen.get(i);
-                        mox.landmarkMap[x][y] = false;
+                        forageCells.cells[x][y] = (forageCells.cells[x][y] + 1) % n;
+                     }
+                     if (forageCells.cells[x][y] == MoxWorx.EMPTY_CELL_VALUE)
+                     {
+                        for (i = 0; i < moxen.size(); i++)
+                        {
+                           mox = moxen.get(i);
+                           mox.landmarkMap[x][y] = false;
+                        }
                      }
                   }
                }
@@ -516,6 +508,18 @@ public class ForageDashboard extends JFrame
                   lastX = x;
                   lastY = y;
                   forageCells.cells[x][y] = (forageCells.cells[x][y] + 1) % n;
+                  if (forageCells.cells[x][y] == ForageCells.MOX_CELL_VALUE)
+                  {
+                     forageCells.cells[x][y] = (forageCells.cells[x][y] + 1) % n;
+                  }
+                  if (forageCells.cells[x][y] == MoxWorx.EMPTY_CELL_VALUE)
+                  {
+                     for (int i = 0; i < moxen.size(); i++)
+                     {
+                        ForagerMox mox = moxen.get(i);
+                        mox.landmarkMap[x][y] = false;
+                     }
+                  }
 
                   // Refresh display.
                   update();

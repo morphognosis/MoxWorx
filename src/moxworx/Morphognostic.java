@@ -17,7 +17,7 @@ import java.util.Vector;
  * size and receding temporal distance from the present.
  * A neighborhood is a tiled configuration of sectors.
  * A sector is a cube of 2D space-time which contains a
- * vector of landmark type densities contained within it.
+ * vector of event type densities contained within it.
  */
 public class Morphognostic
 {
@@ -44,36 +44,47 @@ public class Morphognostic
       // Sector.
       public class Sector
       {
-         public int     dx, dy, dimension;
-         public float[] typeDensities;
-         public int[][] landmarks;
+         public int       dx, dy, dimension;
+         public float[][] typeDensities;
+         public int[][][] events;
 
          public Sector(int dx, int dy, int dimension)
          {
             this.dx        = dx;
             this.dy        = dy;
             this.dimension = dimension;
-            typeDensities  = new float[numLandmarkTypes];
-            landmarks      = new int[dimension][dimension];
+            typeDensities  = new float[eventDimensions][];
+            for (int d = 0; d < eventDimensions; d++)
+            {
+               typeDensities[d] = new float[numEventTypes[d]];
+               for (int i = 0; i < numEventTypes[d]; i++)
+               {
+                  typeDensities[d][i] = 0.0f;
+               }
+            }
+            events = new int[dimension][dimension][eventDimensions];
             for (int x = 0; x < dimension; x++)
             {
                for (int y = 0; y < dimension; y++)
                {
-                  landmarks[x][y] = -1;
+                  for (int d = 0; d < eventDimensions; d++)
+                  {
+                     events[x][y][d] = -1;
+                  }
                }
             }
          }
 
 
-         public void setTypeDensity(int index, float density)
+         public void setTypeDensity(int dimension, int index, float density)
          {
-            typeDensities[index] = density;
+            typeDensities[dimension][index] = density;
          }
 
 
-         public float getTypeDensity(int index)
+         public float getTypeDensity(int dimension, int index)
          {
-            return(typeDensities[index]);
+            return(typeDensities[dimension][index]);
          }
       }
 
@@ -110,7 +121,7 @@ public class Morphognostic
 
 
       // Update.
-      public void update(int[][][] landmarks, int cx, int cy)
+      public void update(int[][][][] events, int cx, int cy)
       {
          // Clear type densities.
          for (int sx1 = 0, sx2 = sectors.length; sx1 < sx2; sx1++)
@@ -118,15 +129,21 @@ public class Morphognostic
             for (int sy1 = 0, sy2 = sectors.length; sy1 < sy2; sy1++)
             {
                Sector s = sectors[sx1][sy1];
-               for (int i = 0; i < numLandmarkTypes; i++)
+               for (int i = 0; i < eventDimensions; i++)
                {
-                  s.typeDensities[i] = 0.0f;
+                  for (int j = 0; j < numEventTypes[i]; j++)
+                  {
+                     s.typeDensities[i][j] = 0.0f;
+                  }
                }
                for (int x = 0; x < s.dimension; x++)
                {
                   for (int y = 0; y < s.dimension; y++)
                   {
-                     s.landmarks[x][y] = -1;
+                     for (int d = 0; d < eventDimensions; d++)
+                     {
+                        s.events[x][y][d] = -1;
+                     }
                   }
                }
             }
@@ -138,41 +155,38 @@ public class Morphognostic
             for (int y0 = cy + dy, y1 = y0, y2 = y0 + dimension; y1 < y2; y1++)
             {
                int x3 = x1;
-               while (x3 < 0) { x3 += landmarks.length; }
-               while (x3 >= landmarks.length) { x3 -= landmarks.length; }
+               while (x3 < 0) { x3 += events.length; }
+               while (x3 >= events.length) { x3 -= events.length; }
                int y3 = y1;
-               while (y3 < 0) { y3 += landmarks.length; }
-               while (y3 >= landmarks.length) { y3 -= landmarks.length; }
-               int t = -1;
-               for (int i = epoch + duration - 1; i >= epoch; i--)
+               while (y3 < 0) { y3 += events.length; }
+               while (y3 >= events.length) { y3 -= events.length; }
+               for (int d = 0; d < eventDimensions; d++)
                {
-                  if (landmarks[x3][y3][i] != -1)
+                  int t = -1;
+                  for (int i = epoch + duration - 1; i >= epoch; i--)
                   {
-                     t = landmarks[x3][y3][i];
-                  }
-               }
-               if (t != -1)
-               {
-                  for (int sx1 = 0, sx2 = sectors.length; sx1 < sx2; sx1++)
-                  {
-                     for (int sy1 = 0, sy2 = sectors.length; sy1 < sy2; sy1++)
+                     if (events[x3][y3][d][i] != -1)
                      {
-                        int    x4 = x1 - x0;
-                        int    y4 = y1 - y0;
-                        Sector s  = sectors[sx1][sy1];
-                        if ((x4 >= s.dx) &&
-                            (x4 < (s.dx + s.dimension)) &&
-                            (y4 >= s.dy) &&
-                            (y4 < (s.dy + s.dimension)))
+                        t = events[x3][y3][d][i];
+                     }
+                  }
+                  if (t != -1)
+                  {
+                     for (int sx1 = 0, sx2 = sectors.length; sx1 < sx2; sx1++)
+                     {
+                        for (int sy1 = 0, sy2 = sectors.length; sy1 < sy2; sy1++)
                         {
-                           int i = t;
-                           if (i >= landmarkBeginValue)
+                           int    x4 = x1 - x0;
+                           int    y4 = y1 - y0;
+                           Sector s  = sectors[sx1][sy1];
+                           if ((x4 >= s.dx) &&
+                               (x4 < (s.dx + s.dimension)) &&
+                               (y4 >= s.dy) &&
+                               (y4 < (s.dy + s.dimension)))
                            {
-                              i -= landmarkBeginValue;
-                              i++;
+                              s.typeDensities[d][t]            += 1.0f;
+                              s.events[x4 - s.dx][y4 - s.dy][d] = t;
                            }
-                           s.typeDensities[i] += 1.0f;
-                           s.landmarks[x4 - s.dx][y4 - s.dy] = t;
                         }
                      }
                   }
@@ -186,9 +200,12 @@ public class Morphognostic
             for (int sy1 = 0, sy2 = sectors.length; sy1 < sy2; sy1++)
             {
                Sector s = sectors[sx1][sy1];
-               for (int i = 0; i < numLandmarkTypes; i++)
+               for (int d = 0; d < eventDimensions; d++)
                {
-                  s.typeDensities[i] /= (float)sectors[sx1][sy1].dimension;
+                  for (int i = 0; i < numEventTypes[d]; i++)
+                  {
+                     s.typeDensities[d][i] /= (float)sectors[sx1][sy1].dimension;
+                  }
                }
             }
          }
@@ -198,25 +215,28 @@ public class Morphognostic
       // Compare neighborhood.
       public float compare(Neighborhood n)
       {
-         float d = 0.0f;
+         float c = 0.0f;
 
-         float[][] densities1 = rectifySectorTypeDensities();
-         float[][] densities2 = n.rectifySectorTypeDensities();
+         float[][][] densities1 = rectifySectorTypeDensities();
+         float[][][] densities2 = n.rectifySectorTypeDensities();
          for (int i = 0, j = sectors.length * sectors.length; i < j; i++)
          {
-            for (int k = 0; k < numLandmarkTypes; k++)
+            for (int d = 0; d < eventDimensions; d++)
             {
-               d += Math.abs(densities1[i][k] - densities2[i][k]);
+               for (int k = 0; k < numEventTypes[d]; k++)
+               {
+                  c += Math.abs(densities1[i][d][k] - densities2[i][d][k]);
+               }
             }
          }
-         return(d);
+         return(c);
       }
 
 
       // Rectify sector densities.
-      public float[][] rectifySectorTypeDensities()
+      public float[][][] rectifySectorTypeDensities()
       {
-         float[][] densities = new float[sectors.length * sectors.length][numLandmarkTypes];
+         float[][][] densities = new float[sectors.length * sectors.length][eventDimensions][];
          switch (orientation)
          {
          case Orientation.NORTH:
@@ -224,9 +244,13 @@ public class Morphognostic
             {
                for (int sx1 = 0, sx2 = sectors.length; sx1 < sx2; sx1++)
                {
-                  for (int j = 0; j < numLandmarkTypes; j++)
+                  for (int d = 0; d < eventDimensions; d++)
                   {
-                     densities[i][j] = sectors[sx1][sy1].typeDensities[j];
+                     densities[i][d] = new float[numEventTypes[d]];
+                     for (int j = 0; j < numEventTypes[d]; j++)
+                     {
+                        densities[i][d][j] = sectors[sx1][sy1].typeDensities[d][j];
+                     }
                   }
                   i++;
                }
@@ -238,9 +262,13 @@ public class Morphognostic
             {
                for (int sx1 = sectors.length - 1; sx1 >= 0; sx1--)
                {
-                  for (int j = 0; j < numLandmarkTypes; j++)
+                  for (int d = 0; d < eventDimensions; d++)
                   {
-                     densities[i][j] = sectors[sx1][sy1].typeDensities[j];
+                     densities[i][d] = new float[numEventTypes[d]];
+                     for (int j = 0; j < numEventTypes[d]; j++)
+                     {
+                        densities[i][d][j] = sectors[sx1][sy1].typeDensities[d][j];
+                     }
                   }
                   i++;
                }
@@ -252,9 +280,13 @@ public class Morphognostic
             {
                for (int sy1 = 0, sy2 = sectors.length; sy1 < sy2; sy1++)
                {
-                  for (int j = 0; j < numLandmarkTypes; j++)
+                  for (int d = 0; d < eventDimensions; d++)
                   {
-                     densities[i][j] = sectors[sx1][sy1].typeDensities[j];
+                     densities[i][d] = new float[numEventTypes[d]];
+                     for (int j = 0; j < numEventTypes[d]; j++)
+                     {
+                        densities[i][d][j] = sectors[sx1][sy1].typeDensities[d][j];
+                     }
                   }
                   i++;
                }
@@ -266,9 +298,13 @@ public class Morphognostic
             {
                for (int sy1 = sectors.length - 1; sy1 >= 0; sy1--)
                {
-                  for (int j = 0; j < numLandmarkTypes; j++)
+                  for (int d = 0; d < eventDimensions; d++)
                   {
-                     densities[i][j] = sectors[sx1][sy1].typeDensities[j];
+                     densities[i][d] = new float[numEventTypes[d]];
+                     for (int j = 0; j < numEventTypes[d]; j++)
+                     {
+                        densities[i][d][j] = sectors[sx1][sy1].typeDensities[d][j];
+                     }
                   }
                   i++;
                }
@@ -288,19 +324,19 @@ public class Morphognostic
    // Orientation.
    public int orientation;
 
-   // Landmarks.
-   public int landmarkBeginValue;
-   public int numLandmarkTypes;
+   // Event quantities.
+   public int[] numEventTypes;
+   public int   eventDimensions;
 
    // Constructor.
-   public Morphognostic(int orientation, int landmarkBeginValue, int numLandmarkTypes)
+   public Morphognostic(int orientation, int[] numEventTypes)
    {
-      init(orientation, landmarkBeginValue, numLandmarkTypes);
+      init(orientation, numEventTypes);
    }
 
 
    // Construct with parameters.
-   public Morphognostic(int orientation, int landmarkBeginValue, int numLandmarkTypes,
+   public Morphognostic(int orientation, int[] numEventTypes,
                         int NUM_NEIGHBORHOODS,
                         int NEIGHBORHOOD_INITIAL_DIMENSION,
                         int NEIGHBORHOOD_DIMENSION_STRIDE,
@@ -315,15 +351,15 @@ public class Morphognostic
       this.NEIGHBORHOOD_DIMENSION_MULTIPLIER = NEIGHBORHOOD_DIMENSION_MULTIPLIER;
       this.EPOCH_INTERVAL_STRIDE             = EPOCH_INTERVAL_STRIDE;
       this.EPOCH_INTERVAL_MULTIPLIER         = EPOCH_INTERVAL_MULTIPLIER;
-      init(orientation, landmarkBeginValue, numLandmarkTypes);
+      init(orientation, numEventTypes);
    }
 
 
-   public void init(int orientation, int landmarkBeginValue, int numLandmarkTypes)
+   public void init(int orientation, int[] numEventTypes)
    {
-      this.orientation        = orientation;
-      this.landmarkBeginValue = landmarkBeginValue;
-      this.numLandmarkTypes   = numLandmarkTypes;
+      this.orientation   = orientation;
+      this.numEventTypes = numEventTypes;
+      eventDimensions    = numEventTypes.length;
 
       // Create neighborhoods.
       neighborhoods = new Vector<Neighborhood>();
@@ -345,11 +381,11 @@ public class Morphognostic
 
 
    // Update.
-   public void update(int[][][] landmarks, int cx, int cy)
+   public void update(int[][][][] events, int cx, int cy)
    {
       for (int i = 0; i < NUM_NEIGHBORHOODS; i++)
       {
-         neighborhoods.get(i).update(landmarks, cx, cy);
+         neighborhoods.get(i).update(events, cx, cy);
       }
    }
 
@@ -377,15 +413,18 @@ public class Morphognostic
             for (int y = 0; y < n.sectors.length; y++)
             {
                Neighborhood.Sector s = n.sectors[x][y];
-               for (int i = 0; i < numLandmarkTypes; i++)
+               for (int d = 0; d < eventDimensions; d++)
                {
-                  s.typeDensities[i] = 0.0f;
-               }
-               for (int x2 = 0; x2 < s.landmarks.length; x2++)
-               {
-                  for (int y2 = 0; y2 < s.landmarks.length; y2++)
+                  for (int i = 0; i < numEventTypes[d]; i++)
                   {
-                     s.landmarks[x2][y2] = -1;
+                     s.typeDensities[d][i] = 0.0f;
+                  }
+                  for (int x2 = 0; x2 < s.events.length; x2++)
+                  {
+                     for (int y2 = 0; y2 < s.events.length; y2++)
+                     {
+                        s.events[x2][y2][d] = -1;
+                     }
                   }
                }
             }
@@ -406,8 +445,11 @@ public class Morphognostic
       Utility.saveInt(writer, EPOCH_INTERVAL_STRIDE);
       Utility.saveInt(writer, EPOCH_INTERVAL_MULTIPLIER);
       Utility.saveInt(writer, orientation);
-      Utility.saveInt(writer, landmarkBeginValue);
-      Utility.saveInt(writer, numLandmarkTypes);
+      Utility.saveInt(writer, eventDimensions);
+      for (int d = 0; d < eventDimensions; d++)
+      {
+         Utility.saveInt(writer, numEventTypes[d]);
+      }
       for (Neighborhood n : neighborhoods)
       {
          for (int x = 0; x < n.sectors.length; x++)
@@ -415,15 +457,18 @@ public class Morphognostic
             for (int y = 0; y < n.sectors.length; y++)
             {
                Neighborhood.Sector s = n.sectors[x][y];
-               for (int i = 0; i < numLandmarkTypes; i++)
+               for (int d = 0; d < eventDimensions; d++)
                {
-                  Utility.saveFloat(writer, s.typeDensities[i]);
-               }
-               for (int x2 = 0; x2 < s.landmarks.length; x2++)
-               {
-                  for (int y2 = 0; y2 < s.landmarks.length; y2++)
+                  for (int i = 0; i < numEventTypes[d]; i++)
                   {
-                     Utility.saveInt(writer, s.landmarks[x2][y2]);
+                     Utility.saveFloat(writer, s.typeDensities[d][i]);
+                  }
+                  for (int x2 = 0; x2 < s.events.length; x2++)
+                  {
+                     for (int y2 = 0; y2 < s.events.length; y2++)
+                     {
+                        Utility.saveInt(writer, s.events[x2][y2][d]);
+                     }
                   }
                }
             }
@@ -443,18 +488,22 @@ public class Morphognostic
       int             NEIGHBORHOOD_DIMENSION_MULTIPLIER = Utility.loadInt(reader);
       int             EPOCH_INTERVAL_STRIDE             = Utility.loadInt(reader);
       int             EPOCH_INTERVAL_MULTIPLIER         = Utility.loadInt(reader);
-      int             orientation        = Utility.loadInt(reader);
-      int             landmarkBeginValue = Utility.loadInt(reader);
-      int             numLandmarkTypes   = Utility.loadInt(reader);
-      Morphognostic   m = new Morphognostic(orientation, landmarkBeginValue, numLandmarkTypes,
-                                            NUM_NEIGHBORHOODS,
-                                            NEIGHBORHOOD_INITIAL_DIMENSION,
-                                            NEIGHBORHOOD_DIMENSION_STRIDE,
-                                            NEIGHBORHOOD_DIMENSION_MULTIPLIER,
-                                            EPOCH_INTERVAL_STRIDE,
-                                            EPOCH_INTERVAL_MULTIPLIER
-                                            );
+      int             orientation     = Utility.loadInt(reader);
+      int             eventDimensions = Utility.loadInt(reader);
 
+      int[] numEventTypes = new int[eventDimensions];
+      for (int d = 0; d < eventDimensions; d++)
+      {
+         numEventTypes[d] = Utility.loadInt(reader);
+      }
+      Morphognostic m = new Morphognostic(orientation, numEventTypes,
+                                          NUM_NEIGHBORHOODS,
+                                          NEIGHBORHOOD_INITIAL_DIMENSION,
+                                          NEIGHBORHOOD_DIMENSION_STRIDE,
+                                          NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                                          EPOCH_INTERVAL_STRIDE,
+                                          EPOCH_INTERVAL_MULTIPLIER
+                                          );
       for (Neighborhood n : m.neighborhoods)
       {
          for (int x = 0; x < n.sectors.length; x++)
@@ -462,15 +511,18 @@ public class Morphognostic
             for (int y = 0; y < n.sectors.length; y++)
             {
                Neighborhood.Sector s = n.sectors[x][y];
-               for (int i = 0; i < numLandmarkTypes; i++)
+               for (int d = 0; d < eventDimensions; d++)
                {
-                  s.typeDensities[i] = Utility.loadFloat(reader);
-               }
-               for (int x2 = 0; x2 < s.landmarks.length; x2++)
-               {
-                  for (int y2 = 0; y2 < s.landmarks.length; y2++)
+                  for (int i = 0; i < numEventTypes[d]; i++)
                   {
-                     s.landmarks[x2][y2] = Utility.loadInt(reader);
+                     s.typeDensities[d][i] = Utility.loadFloat(reader);
+                  }
+                  for (int x2 = 0; x2 < s.events.length; x2++)
+                  {
+                     for (int y2 = 0; y2 < s.events.length; y2++)
+                     {
+                        s.events[x2][y2][d] = Utility.loadInt(reader);
+                     }
                   }
                }
             }
@@ -483,7 +535,7 @@ public class Morphognostic
    // Clone.
    public Morphognostic clone()
    {
-      Morphognostic m = new Morphognostic(orientation, landmarkBeginValue, numLandmarkTypes,
+      Morphognostic m = new Morphognostic(orientation, numEventTypes,
                                           NUM_NEIGHBORHOODS,
                                           NEIGHBORHOOD_INITIAL_DIMENSION,
                                           NEIGHBORHOOD_DIMENSION_STRIDE,
@@ -502,15 +554,18 @@ public class Morphognostic
             {
                Neighborhood.Sector s1 = n1.sectors[x][y];
                Neighborhood.Sector s2 = n2.sectors[x][y];
-               for (int j = 0; j < numLandmarkTypes; j++)
+               for (int d = 0; d < eventDimensions; d++)
                {
-                  s1.typeDensities[j] = s2.typeDensities[j];
-               }
-               for (int x2 = 0; x2 < s1.landmarks.length; x2++)
-               {
-                  for (int y2 = 0; y2 < s1.landmarks.length; y2++)
+                  for (int j = 0; j < numEventTypes[d]; j++)
                   {
-                     s1.landmarks[x2][y2] = s2.landmarks[x2][y2];
+                     s1.typeDensities[d][j] = s2.typeDensities[d][j];
+                  }
+                  for (int x2 = 0; x2 < s1.events.length; x2++)
+                  {
+                     for (int y2 = 0; y2 < s1.events.length; y2++)
+                     {
+                        s1.events[x2][y2][d] = s2.events[x2][y2][d];
+                     }
                   }
                }
             }
@@ -530,7 +585,7 @@ public class Morphognostic
       System.out.println("EPOCH_INTERVAL_STRIDE=" + EPOCH_INTERVAL_STRIDE);
       System.out.println("EPOCH_INTERVAL_MULTIPLIER=" + EPOCH_INTERVAL_MULTIPLIER);
       System.out.println("orientation=" + orientation);
-      System.out.println("numLandmarkTypes=" + numLandmarkTypes);
+      System.out.println("eventDimensions=" + eventDimensions);
       for (int i = 0; i < neighborhoods.size(); i++)
       {
          Neighborhood n = neighborhoods.get(i);
@@ -545,22 +600,25 @@ public class Morphognostic
                System.out.println("\tsector[" + x + "][" + y + "]:");
                Neighborhood.Sector s = n.sectors[x][y];
                System.out.println("\t\tdx/dy=" + s.dx + "/" + s.dy);
-               System.out.print("\t\tdensities:");
-               for (int j = 0; j < numLandmarkTypes; j++)
+               for (int d = 0; d < eventDimensions; d++)
                {
-                  System.out.print(" " + s.typeDensities[j]);
-               }
-               System.out.println("");
-               System.out.println("\t\tlandmarks:");
-               for (int x2 = 0; x2 < s.landmarks.length; x2++)
-               {
-                  System.out.print("\t\t\t");
-                  for (int y2 = 0; y2 < s.landmarks.length; y2++)
+                  System.out.print("\t\tdensities[" + d + "]:");
+                  for (int j = 0; j < numEventTypes[d]; j++)
                   {
-                     if (s.landmarks[x2][y2] >= 0) { System.out.print(" "); }
-                     System.out.print(s.landmarks[x2][y2] + " ");
+                     System.out.print(" " + s.typeDensities[d][j]);
                   }
                   System.out.println("");
+                  System.out.println("\t\tevents[" + d + "]:");
+                  for (int x2 = 0; x2 < s.events.length; x2++)
+                  {
+                     System.out.print("\t\t\t");
+                     for (int y2 = 0; y2 < s.events.length; y2++)
+                     {
+                        if (s.events[x2][y2][d] >= 0) { System.out.print(" "); }
+                        System.out.print(s.events[x2][y2][d] + " ");
+                     }
+                     System.out.println("");
+                  }
                }
             }
          }

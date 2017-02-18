@@ -1,6 +1,6 @@
 // For conditions of distribution and use, see copyright notice in MoxWorx.java
 
-// Nest dashboard.
+// Nest display.
 
 package moxworx;
 
@@ -11,7 +11,7 @@ import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.event.*;
 
-public class NestDashboard extends JFrame
+public class NestDisplay extends JFrame
 {
    private static final long serialVersionUID = 0L;
 
@@ -25,11 +25,8 @@ public class NestDashboard extends JFrame
    // Nest cells.
    NestCells nestCells;
 
-   // Number of landmark types.
-   int numLandmarkTypes;
-
    // Dimensions.
-   static final Dimension DASHBOARD_SIZE = new Dimension(600, 700);
+   static final Dimension DISPLAY_SIZE = new Dimension(600, 700);
 
    // Mox display.
    MoxDisplay display;
@@ -46,21 +43,19 @@ public class NestDashboard extends JFrame
    boolean quit;
 
    // Constructors.
-   public NestDashboard(NestCells nestCells, int numLandmarkTypes, ArrayList<NestingMox> moxen)
+   public NestDisplay(NestCells nestCells, ArrayList<NestingMox> moxen)
    {
-      this.nestCells        = nestCells;
-      this.numLandmarkTypes = numLandmarkTypes;
+      this.nestCells = nestCells;
       setMoxen(moxen);
       currentMox = -1;
       init();
    }
 
 
-   public NestDashboard(NestCells nestCells, int numLandmarkTypes)
+   public NestDisplay(NestCells nestCells)
    {
-      this.nestCells        = nestCells;
-      this.numLandmarkTypes = numLandmarkTypes;
-      moxen = new ArrayList<NestingMox>();
+      this.nestCells = nestCells;
+      moxen          = new ArrayList<NestingMox>();
       setMoxen(moxen);
       currentMox = -1;
       init();
@@ -70,7 +65,7 @@ public class NestDashboard extends JFrame
    // Initialize.
    void init()
    {
-      // Set up dashboard.
+      // Set up display.
       setTitle("Nest");
       addWindowListener(new WindowAdapter()
                         {
@@ -81,13 +76,13 @@ public class NestDashboard extends JFrame
                            }
                         }
                         );
-      setBounds(0, 0, DASHBOARD_SIZE.width, DASHBOARD_SIZE.height);
+      setBounds(0, 0, DISPLAY_SIZE.width, DISPLAY_SIZE.height);
       JPanel basePanel = (JPanel)getContentPane();
       basePanel.setLayout(new BorderLayout());
 
       // Create display.
-      Dimension displaySize = new Dimension(DASHBOARD_SIZE.width,
-                                            (int)((double)DASHBOARD_SIZE.height * .8));
+      Dimension displaySize = new Dimension(DISPLAY_SIZE.width,
+                                            (int)((double)DISPLAY_SIZE.height * .8));
       display = new MoxDisplay(displaySize);
       basePanel.add(display, BorderLayout.NORTH);
 
@@ -95,7 +90,7 @@ public class NestDashboard extends JFrame
       controls = new MoxControls();
       basePanel.add(controls, BorderLayout.SOUTH);
 
-      // Make dashboard visible.
+      // Make display visible.
       pack();
       setCenterLocation();
       setVisible(true);
@@ -147,7 +142,7 @@ public class NestDashboard extends JFrame
    }
 
 
-   // Update dashboard.
+   // Update display.
    public void update(int steps)
    {
       controls.updateStepCounter(steps);
@@ -230,17 +225,13 @@ public class NestDashboard extends JFrame
    {
       private static final long serialVersionUID = 0L;
 
+      final Color MOX_COLOR = Color.BLUE;
+
       // Buffered display.
       private Dimension canvasSize;
       private Graphics  graphics;
       private Image     image;
       private Graphics  imageGraphics;
-
-      // Last cell visited by mouse.
-      private int lastX = -1;
-
-      // Last cell visited by mouse.
-      private int lastY = -1;
 
       // Constructor.
       public MoxDisplay(Dimension canvasSize)
@@ -254,7 +245,7 @@ public class NestDashboard extends JFrame
 
 
       // Update display.
-      void update()
+      synchronized void update()
       {
          int   x;
          int   y;
@@ -288,7 +279,6 @@ public class NestDashboard extends JFrame
          cellHeight = (float)canvasSize.height / (float)nestCells.size.height;
 
          // Draw cells.
-         Random random = new Random();
          for (x = x2 = 0; x < nestCells.size.width;
               x++, x2 = (int)(cellWidth * (double)x))
          {
@@ -296,33 +286,16 @@ public class NestDashboard extends JFrame
                  y < nestCells.size.height;
                  y++, y2 = (int)(cellHeight * (double)(nestCells.size.height - (y + 1))))
             {
-               switch (nestCells.cells[x][y])
+               Color color = SectorDisplay.getEventColor(NestCells.ELEVATION_CELL_INDEX,
+                                                         nestCells.cells[x][y][NestCells.ELEVATION_CELL_INDEX]);
+               imageGraphics.setColor(color);
+               imageGraphics.fillRect(x2, y2, (int)cellWidth + 1, (int)cellHeight + 1);
+               if (nestCells.cells[x][y][NestCells.STONE_CELL_INDEX] == NestCells.STONE_CELL_VALUE)
                {
-               case MoxWorx.EMPTY_CELL_VALUE:
-                  imageGraphics.setColor(MoxWorx.EMPTY_CELL_COLOR);
-                  imageGraphics.fillRect(x2, y2, (int)cellWidth + 1,
-                                         (int)cellHeight + 1);
-                  break;
-
-               case NestCells.FOOD_CELL_VALUE:
-                  imageGraphics.setColor(Color.white);
-                  imageGraphics.fillRect(x2 + 1, y2 + 1, (int)cellWidth - 1,
-                                         (int)cellHeight - 1);
-                  imageGraphics.setColor(NestCells.FOOD_CELL_COLOR);
-                  imageGraphics.fillOval(x2, y2, (int)cellWidth,
-                                         (int)cellHeight);
-                  break;
-
-               default:
-                  random.setSeed(nestCells.cells[x][y]);
-                  float r     = random.nextFloat();
-                  float g     = random.nextFloat();
-                  float b     = random.nextFloat();
-                  Color color = new Color(r, g, b);
+                  color = SectorDisplay.getEventColor(NestCells.STONE_CELL_INDEX,
+                                                      nestCells.cells[x][y][NestCells.STONE_CELL_INDEX]);
                   imageGraphics.setColor(color);
-                  imageGraphics.fillRect(x2, y2, (int)cellWidth + 1,
-                                         (int)cellHeight + 1);
-                  break;
+                  imageGraphics.fillOval(x2, y2, (int)cellWidth, (int)cellHeight);
                }
             }
          }
@@ -330,21 +303,17 @@ public class NestDashboard extends JFrame
          // Draw grid.
          imageGraphics.setColor(Color.black);
          y2 = canvasSize.height;
-
          for (x = 1, x2 = (int)cellWidth; x < nestCells.size.width;
               x++, x2 = (int)(cellWidth * (double)x))
          {
             imageGraphics.drawLine(x2, 0, x2, y2);
          }
-
          x2 = canvasSize.width;
-
          for (y = 1, y2 = (int)cellHeight; y < nestCells.size.height;
               y++, y2 = (int)(cellHeight * (double)y))
          {
             imageGraphics.drawLine(0, y2, x2, y2);
          }
-
          imageGraphics.setColor(Color.black);
 
          // Draw moxen.
@@ -355,21 +324,8 @@ public class NestDashboard extends JFrame
          {
             mox = (NestingMox)moxen.get(i);
             x2  = (int)(cellWidth * (double)mox.x);
-            y2  = (int)(cellHeight *
-                        (double)(nestCells.size.height - (mox.y + 1)));
-
-            // Highlight selected mox?
-            if (i == currentMox)
-            {
-               imageGraphics.setColor(Color.lightGray);
-            }
-            else
-            {
-               imageGraphics.setColor(Color.white);
-            }
-            imageGraphics.fillRect(x2 + 1, y2 + 1, (int)cellWidth - 1,
-                                   (int)cellHeight - 1);
-            imageGraphics.setColor(NestCells.MOX_CELL_COLOR);
+            y2  = (int)(cellHeight * (double)(nestCells.size.height - (mox.y + 1)));
+            imageGraphics.setColor(MOX_COLOR);
             if (mox.direction == Orientation.NORTH)
             {
                vx[0] = x2 + (int)(cellWidth * 0.5f);
@@ -407,6 +363,22 @@ public class NestDashboard extends JFrame
                vy[2] = y2 + (int)cellHeight;
             }
             imageGraphics.fillPolygon(vx, vy, 3);
+            if (i == currentMox)
+            {
+               imageGraphics.setColor(Color.RED);
+               imageGraphics.drawPolygon(vx, vy, 3);
+            }
+            if (mox.hasStone)
+            {
+               Color color = SectorDisplay.getEventColor(NestCells.STONE_CELL_INDEX,
+                                                         NestCells.STONE_CELL_VALUE);
+               imageGraphics.setColor(color);
+               x2  = (int)(cellWidth * (double)mox.x);
+               x2 += (int)(cellWidth * 0.25f);
+               y2  = (int)(cellHeight * (double)(nestCells.size.height - (mox.y + 1)));
+               y2 += (int)(cellHeight * 0.25f);
+               imageGraphics.fillOval(x2, y2, (int)(cellWidth * 0.5f), (int)(cellHeight * 0.5f));
+            }
          }
 
          // Refresh display.
@@ -434,9 +406,6 @@ public class NestDashboard extends JFrame
             if ((x >= 0) && (x < nestCells.size.width) &&
                 (y >= 0) && (y < nestCells.size.height))
             {
-               lastX = x;
-               lastY = y;
-
                // Selecting mox?
                moxSelected = false;
                for (i = 0; i < moxen.size(); i++)
@@ -473,20 +442,6 @@ public class NestDashboard extends JFrame
                   currentMox = -1;
                }
 
-               if (!moxSelected)
-               {
-                  int n = NestCells.LANDMARK_CELLS_BEGIN_VALUE + numLandmarkTypes;
-                  nestCells.cells[x][y] = (nestCells.cells[x][y] + 1) % n;
-                  if (nestCells.cells[x][y] == MoxWorx.EMPTY_CELL_VALUE)
-                  {
-                     for (i = 0; i < moxen.size(); i++)
-                     {
-                        mox = moxen.get(i);
-                        mox.landmarkMap[x][y] = false;
-                     }
-                  }
-               }
-
                // Refresh display.
                update();
             }
@@ -499,28 +454,6 @@ public class NestDashboard extends JFrame
          // Mouse dragged.
          public void mouseDragged(MouseEvent evt)
          {
-            int    x;
-            int    y;
-            double cellWidth  = (double)canvasSize.width / (double)nestCells.size.width;
-            double cellHeight = (double)canvasSize.height / (double)nestCells.size.height;
-            int    n          = NestCells.LANDMARK_CELLS_BEGIN_VALUE + numLandmarkTypes;
-
-            x = (int)((double)evt.getX() / cellWidth);
-            y = nestCells.size.height - (int)((double)evt.getY() / cellHeight) - 1;
-
-            if ((x >= 0) && (x < nestCells.size.width) &&
-                (y >= 0) && (y < nestCells.size.height))
-            {
-               if ((x != lastX) || (y != lastY))
-               {
-                  lastX = x;
-                  lastY = y;
-                  nestCells.cells[x][y] = (nestCells.cells[x][y] + 1) % n;
-
-                  // Refresh display.
-                  update();
-               }
-            }
          }
       }
    }

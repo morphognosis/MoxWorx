@@ -15,8 +15,8 @@ public class SectorDisplay extends JFrame implements Runnable
 {
    private static final long serialVersionUID = 0L;
 
-   // Dashboard.
-   MorphognosticDashboard dashboard;
+   // Display.
+   MorphognosticDisplay display;
 
    // Neighborhood and sector.
    int neighborhoodIndex;
@@ -37,16 +37,16 @@ public class SectorDisplay extends JFrame implements Runnable
    DISPLAY_MODE displayMode;
 
    // Constructor.
-   public SectorDisplay(MorphognosticDashboard dashboard,
+   public SectorDisplay(MorphognosticDisplay display,
                         int neighborhoodIndex, int sectorXindex, int sectorYindex)
    {
-      this.dashboard         = dashboard;
+      this.display           = display;
       this.neighborhoodIndex = neighborhoodIndex;
       this.sectorXindex      = sectorXindex;
       this.sectorYindex      = sectorYindex;
-      sector = dashboard.morphognostic.neighborhoods.get(neighborhoodIndex).sectors[sectorXindex][sectorYindex];
+      sector = display.morphognostic.neighborhoods.get(neighborhoodIndex).sectors[sectorXindex][sectorYindex];
 
-      setTitle("M=" + dashboard.moxID + " N=" + neighborhoodIndex +
+      setTitle("M=" + display.moxID + " N=" + neighborhoodIndex +
                " S=[" + sectorXindex + "," + sectorYindex + "]");
       addWindowListener(new WindowAdapter()
                         {
@@ -114,7 +114,7 @@ public class SectorDisplay extends JFrame implements Runnable
    void close()
    {
       setVisible(false);
-      dashboard.closeDisplay(neighborhoodIndex, sectorXindex, sectorYindex);
+      display.closeDisplay(neighborhoodIndex, sectorXindex, sectorYindex);
    }
 
 
@@ -141,35 +141,32 @@ public class SectorDisplay extends JFrame implements Runnable
    // Update display.
    public void updateDisplay()
    {
+      int d, i, j, n, w, h, x, x2, y, y2;
+
       imageGraphics.setColor(Color.gray);
       imageGraphics.fillRect(0, 0, imageSize.width, imageSize.height);
-      Random random = new Random();
 
       if (displayMode == DISPLAY_MODE.DENSITIES)
       {
          // Draw type density histogram.
-         int n = dashboard.morphognostic.numLandmarkTypes;
-         int w = imageSize.width / n;
-         for (int i = 0, x = 0; i < n; i++, x += w)
+         n = 0;
+         for (d = 0; d < display.morphognostic.eventDimensions; d++)
          {
-            if (i == MoxWorx.EMPTY_CELL_VALUE)
+            n += display.morphognostic.numEventTypes[d];
+         }
+         w = imageSize.width / n;
+         i = x = 0;
+         for (d = 0; d < display.morphognostic.eventDimensions; d++)
+         {
+            for (j = 0; j < display.morphognostic.numEventTypes[d]; j++, i++, x += w)
             {
-               imageGraphics.setColor(MoxWorx.EMPTY_CELL_COLOR);
+               imageGraphics.setColor(getEventColor(d, j));
+               h = (int)((float)imageSize.height * sector.getTypeDensity(d, j));
+               imageGraphics.fillRect(x, imageSize.height - h, w + 1, h);
             }
-            else
-            {
-               random.setSeed(i + NestCells.LANDMARK_CELLS_BEGIN_VALUE - 1);
-               float r     = random.nextFloat();
-               float g     = random.nextFloat();
-               float b     = random.nextFloat();
-               Color color = new Color(r, g, b);
-               imageGraphics.setColor(color);
-            }
-            float h = (float)imageSize.height * sector.getTypeDensity(i);
-            imageGraphics.fillRect(x, (int)(imageSize.height - h), w + 1, (int)h);
          }
          imageGraphics.setColor(Color.black);
-         for (int i = 0, j = n - 1, x = w; i < j; i++, x += w)
+         for (i = 0, j = n - 1, x = w; i < j; i++, x += w)
          {
             imageGraphics.drawLine(x, 0, x, imageSize.height);
          }
@@ -177,57 +174,82 @@ public class SectorDisplay extends JFrame implements Runnable
       else
       {
          // Draw landmarks.
-         float cellWidth  = (float)imageSize.width / (float)sector.landmarks.length;
-         float cellHeight = (float)imageSize.height / (float)sector.landmarks.length;
-         for (int x = 0, x2 = 0; x < sector.landmarks.length;
+         float cellWidth  = (float)imageSize.width / (float)sector.events.length;
+         float cellHeight = (float)imageSize.height / (float)sector.events.length;
+         for (x = 0, x2 = 0; x < sector.events.length;
               x++, x2 = (int)(cellWidth * (double)x))
          {
-            for (int y = 0, y2 = imageSize.height - (int)cellHeight;
-                 y < sector.landmarks.length;
-                 y++, y2 = (int)(cellHeight * (double)(sector.landmarks.length - (y + 1))))
+            for (y = 0, y2 = imageSize.height - (int)cellHeight;
+                 y < sector.events.length;
+                 y++, y2 = (int)(cellHeight * (double)(sector.events.length - (y + 1))))
             {
-               switch (sector.landmarks[x][y])
+               Color color = getEventColor(0, sector.events[x][y][0]);
+               for (d = 0; d < display.morphognostic.eventDimensions; d++)
                {
-               case -1:
-                  imageGraphics.setColor(Color.gray);
-                  imageGraphics.fillRect(x2, y2, (int)cellWidth + 1,
-                                         (int)cellHeight + 1);
-                  break;
-
-               case MoxWorx.EMPTY_CELL_VALUE:
-                  imageGraphics.setColor(MoxWorx.EMPTY_CELL_COLOR);
-                  imageGraphics.fillRect(x2, y2, (int)cellWidth + 1,
-                                         (int)cellHeight + 1);
-                  break;
-
-               default:
-                  random.setSeed(sector.landmarks[x][y]);
-                  float r     = random.nextFloat();
-                  float g     = random.nextFloat();
-                  float b     = random.nextFloat();
-                  Color color = new Color(r, g, b);
-                  imageGraphics.setColor(color);
-                  imageGraphics.fillRect(x2, y2, (int)cellWidth + 1,
-                                         (int)cellHeight + 1);
-                  break;
+                  if ((sector.events[x][y][d] != -1) &&
+                      (sector.events[x][y][d] != MoxWorx.EMPTY_CELL_VALUE))
+                  {
+                     color = getEventColor(d, sector.events[x][y][d]);
+                     break;
+                  }
                }
+               imageGraphics.setColor(color);
+               imageGraphics.fillRect(x2, y2, (int)cellWidth + 1,
+                                      (int)cellHeight + 1);
             }
          }
          imageGraphics.setColor(Color.black);
-         int h = imageSize.height;
-         for (int x = 1, x2 = (int)cellWidth; x < sector.landmarks.length;
+         h = imageSize.height;
+         for (x = 1, x2 = (int)cellWidth; x < sector.events.length;
               x++, x2 = (int)(cellWidth * (double)x))
          {
             imageGraphics.drawLine(x2, 0, x2, h);
          }
-         int w = imageSize.width;
-         for (int y = 1, y2 = (int)cellHeight; y < sector.landmarks.length;
+         w = imageSize.width;
+         for (y = 1, y2 = (int)cellHeight; y < sector.events.length;
               y++, y2 = (int)(cellHeight * (double)y))
          {
             imageGraphics.drawLine(0, y2, w, y2);
          }
       }
-
       canvasGraphics.drawImage(image, 0, 0, this);
+   }
+
+
+   // Graduated colors.
+   public static boolean[] graduatedColors        = null;
+   public static int[]     graduatedColorMaximums = null;
+
+   // Get event color.
+   static Color getEventColor(int dimension, int eventType)
+   {
+      switch (eventType)
+      {
+      case -1:
+         return(Color.GRAY);
+
+      case MoxWorx.EMPTY_CELL_VALUE:
+         return(MoxWorx.EMPTY_CELL_COLOR);
+
+      default:
+         Random random = new Random();
+         if ((graduatedColors == null) || !graduatedColors[dimension])
+         {
+            random.setSeed(((dimension + 3) * 1000) + eventType);
+            float r = random.nextFloat();
+            float g = random.nextFloat();
+            float b = random.nextFloat();
+            return(new Color(r, g, b));
+         }
+         else
+         {
+            random.setSeed(dimension + 2);
+            float s = (float)eventType / (float)graduatedColorMaximums[dimension];
+            int   r = 255 - (int)(255.0f * random.nextFloat() * s);
+            int   g = 255 - (int)(255.0f * random.nextFloat() * s);
+            int   b = 255 - (int)(255.0f * random.nextFloat() * s);
+            return(new Color(r, g, b));
+         }
+      }
    }
 }

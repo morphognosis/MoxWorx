@@ -16,13 +16,11 @@ public class Nest
       "Usage:\n" +
       "  New run:\n" +
       "    java moxworx.Nest\n" +
-      "      -steps <steps> (stops when food consumed) | -dashboard\n" +
+      "      -steps <steps> (stops when food consumed) | -display\n" +
       "      -dimensions <width> <height>\n" +
       "     [-driver <metamorphDB | metamorphNN | autopilot> (mox driver: default=autopilot)]\n" +
       "     [-numMoxen <quantity> (default=0)]\n" +
-      "     [-numLandmarkTypes <quantity> (default=1)]\n" +
-      "     [-numLandmarks <quantity> (default=0)]\n" +
-      "     [-numFoods <quantity> (default=0)]\n" +
+      "     [-numStones <quantity> (default=0)]\n" +
       "     [-numNeighborhoods <quantity> (default=" + Morphognostic.DEFAULT_NUM_NEIGHBORHOODS + ")]\n" +
       "     [-neighborhoodInitialDimension <quantity> (default=" + Morphognostic.DEFAULT_NEIGHBORHOOD_INITIAL_DIMENSION + ")]\n" +
       "     [-neighborhoodDimensionStride <quantity> (default=" + Morphognostic.DEFAULT_NEIGHBORHOOD_DIMENSION_STRIDE + ")]\n" +
@@ -33,7 +31,7 @@ public class Nest
       "     [-save <file name>]\n" +
       "  Resume run:\n" +
       "    java moxworx.Nest\n" +
-      "      -steps <steps> (stops when food consumed) | -dashboard\n" +
+      "      -steps <steps> (stops when food consumed) | -display\n" +
       "      -load <file name>\n" +
       "     [-driver <metamorphDB | metamorphNN | autopilot> (default=autopilot)]\n" +
       "     [-randomSeed <random number seed>]\n" +
@@ -46,17 +44,14 @@ public class Nest
    // Default random seed.
    public static final int DEFAULT_RANDOM_SEED = 4517;
 
-   // Number of landmark types.
-   int numLandmarkTypes;
-
    // Moxen.
    ArrayList<NestingMox> moxen;
 
    // Cells.
    NestCells nestCells;
 
-   // Dashboard display.
-   NestDashboard dashboard;
+   // Display.
+   NestDisplay display;
 
    // Random numbers.
    Random random;
@@ -68,11 +63,9 @@ public class Nest
 
 
    // Initialize cells.
-   public void initCells(int width, int height, int numLandmarkTypes, int numLandmarks, int numFoods)
+   public void initCells(int width, int height, int numStones)
    {
       int i, j, n, x, y;
-
-      this.numLandmarkTypes = numLandmarkTypes;
 
       // Create cells.
       nestCells = new NestCells(new Dimension(width, height));
@@ -80,42 +73,82 @@ public class Nest
       {
          for (y = 0; y < height; y++)
          {
-            nestCells.cells[x][y] = nestCells.restoreCells[x][y] = MoxWorx.EMPTY_CELL_VALUE;
+            nestCells.cells[x][y][NestCells.STONE_CELL_INDEX]               =
+               nestCells.restoreCells[x][y][NestCells.STONE_CELL_INDEX]     = MoxWorx.EMPTY_CELL_VALUE;
+            nestCells.cells[x][y][NestCells.ELEVATION_CELL_INDEX]           =
+               nestCells.restoreCells[x][y][NestCells.ELEVATION_CELL_INDEX] = MoxWorx.EMPTY_CELL_VALUE;
          }
       }
 
-      // Create landmarks.
+      // Create stones.
       n = 10;
-      for (i = 0; i < numLandmarks; i++)
+      for (i = 0; i < numStones; i++)
       {
          for (j = 0; j < n; j++)
          {
             x = random.nextInt(width);
             y = random.nextInt(height);
-            if (nestCells.cells[x][y] == MoxWorx.EMPTY_CELL_VALUE)
+            if (nestCells.cells[x][y][NestCells.STONE_CELL_INDEX] == MoxWorx.EMPTY_CELL_VALUE)
             {
-               int k = 0;
-               if (numLandmarkTypes > 1)
-               {
-                  k = random.nextInt(numLandmarkTypes);
-               }
-               nestCells.cells[x][y] = nestCells.restoreCells[x][y] = NestCells.LANDMARK_CELLS_BEGIN_VALUE + k;
+               nestCells.cells[x][y][NestCells.STONE_CELL_INDEX]           =
+                  nestCells.restoreCells[x][y][NestCells.STONE_CELL_INDEX] = NestCells.STONE_CELL_VALUE;
                break;
             }
          }
       }
 
-      // Create foods.
-      for (i = 0; i < numFoods; i++)
+      // Set elevations.
+      x = random.nextInt(width - 2) + 1;
+      y = random.nextInt(height - 2) + 1;
+      nestCells.cells[x][y][NestCells.ELEVATION_CELL_INDEX]     = NestCells.NUM_ELEVATION_VALUES - 1;
+      nestCells.cells[x + 1][y][NestCells.ELEVATION_CELL_INDEX] = NestCells.NUM_ELEVATION_VALUES - 1;
+      nestCells.cells[x - 1][y][NestCells.ELEVATION_CELL_INDEX] = NestCells.NUM_ELEVATION_VALUES - 1;
+      nestCells.cells[x][y + 1][NestCells.ELEVATION_CELL_INDEX] = NestCells.NUM_ELEVATION_VALUES - 1;
+      nestCells.cells[x][y - 1][NestCells.ELEVATION_CELL_INDEX] = NestCells.NUM_ELEVATION_VALUES - 1;
+      for (i = NestCells.NUM_ELEVATION_VALUES - 1; i > MoxWorx.EMPTY_CELL_VALUE; i--)
       {
-         for (j = 0; j < n; j++)
+         for (x = 0; x < width; x++)
          {
-            x = random.nextInt(width);
-            y = random.nextInt(height);
-            if (nestCells.cells[x][y] == MoxWorx.EMPTY_CELL_VALUE)
+            for (y = 0; y < height; y++)
             {
-               nestCells.cells[x][y] = nestCells.restoreCells[x][y] = NestCells.FOOD_CELL_VALUE;
-               break;
+               int m = nestCells.cells[x][y][NestCells.ELEVATION_CELL_INDEX];
+               if (m < i)
+               {
+                  int x2 = x;
+                  int y2 = ((y + 1) % height);
+                  int m2 = nestCells.cells[x2][y2][NestCells.ELEVATION_CELL_INDEX];
+                  if (m2 == i)
+                  {
+                     nestCells.cells[x][y][NestCells.ELEVATION_CELL_INDEX] = i - 1;
+                     continue;
+                  }
+                  x2 = (x + 1) % width;
+                  y2 = y;
+                  m2 = nestCells.cells[x2][y2][NestCells.ELEVATION_CELL_INDEX];
+                  if (m2 == i)
+                  {
+                     nestCells.cells[x][y][NestCells.ELEVATION_CELL_INDEX] = i - 1;
+                     continue;
+                  }
+                  x2 = x;
+                  y2 = y - 1;
+                  if (y2 < 0) { y2 += height; }
+                  m2 = nestCells.cells[x2][y2][NestCells.ELEVATION_CELL_INDEX];
+                  if (m2 == i)
+                  {
+                     nestCells.cells[x][y][NestCells.ELEVATION_CELL_INDEX] = i - 1;
+                     continue;
+                  }
+                  x2 = x - 1;
+                  if (x2 < 0) { x2 += width; }
+                  y2 = y;
+                  m2 = nestCells.cells[x2][y2][NestCells.ELEVATION_CELL_INDEX];
+                  if (m2 == i)
+                  {
+                     nestCells.cells[x][y][NestCells.ELEVATION_CELL_INDEX] = i - 1;
+                     continue;
+                  }
+               }
             }
          }
       }
@@ -152,7 +185,7 @@ public class Nest
 
 
    // Create moxen.
-   public void createMoxen(int numMoxen, int numLandmarkTypes,
+   public void createMoxen(int numMoxen,
                            int NUM_NEIGHBORHOODS,
                            int NEIGHBORHOOD_INITIAL_DIMENSION,
                            int NEIGHBORHOOD_DIMENSION_STRIDE,
@@ -160,34 +193,25 @@ public class Nest
                            int EPOCH_INTERVAL_STRIDE,
                            int EPOCH_INTERVAL_MULTIPLIER)
    {
-      int i, j, n, x, y, w, h;
+      int i, x, y, w, h;
 
       // Create moxen.
       w     = nestCells.size.width;
       h     = nestCells.size.height;
       moxen = new ArrayList<NestingMox>(numMoxen);
-      n     = 10;
       for (i = 0; i < numMoxen; i++)
       {
-         for (j = 0; j < n; j++)
-         {
-            x = random.nextInt(w);
-            y = random.nextInt(h);
-            if (nestCells.cells[x][y] == MoxWorx.EMPTY_CELL_VALUE)
-            {
-               int o = Orientation.NORTH;
-               o = random.nextInt(Orientation.NUM_ORIENTATIONS);
-               moxen.add(i, new NestingMox(i, x, y, o, numLandmarkTypes, nestCells,
-                                           NUM_NEIGHBORHOODS,
-                                           NEIGHBORHOOD_INITIAL_DIMENSION,
-                                           NEIGHBORHOOD_DIMENSION_STRIDE,
-                                           NEIGHBORHOOD_DIMENSION_MULTIPLIER,
-                                           EPOCH_INTERVAL_STRIDE,
-                                           EPOCH_INTERVAL_MULTIPLIER));
-               nestCells.cells[x][y] = nestCells.restoreCells[x][y] = NestCells.MOX_CELL_VALUE;
-               break;
-            }
-         }
+         x = random.nextInt(w);
+         y = random.nextInt(h);
+         int o = Orientation.NORTH;
+         o = random.nextInt(Orientation.NUM_ORIENTATIONS);
+         moxen.add(i, new NestingMox(i, x, y, o, nestCells,
+                                     NUM_NEIGHBORHOODS,
+                                     NEIGHBORHOOD_INITIAL_DIMENSION,
+                                     NEIGHBORHOOD_DIMENSION_STRIDE,
+                                     NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                                     EPOCH_INTERVAL_STRIDE,
+                                     EPOCH_INTERVAL_MULTIPLIER));
       }
    }
 
@@ -196,9 +220,9 @@ public class Nest
    public void setMoxen(ArrayList<NestingMox> moxen)
    {
       this.moxen = moxen;
-      if (dashboard != null)
+      if (display != null)
       {
-         dashboard.setMoxen(moxen);
+         display.setMoxen(moxen);
       }
    }
 
@@ -218,9 +242,9 @@ public class Nest
             moxen.get(i).reset();
          }
       }
-      if (dashboard != null)
+      if (display != null)
       {
-         dashboard.close();
+         display.close();
       }
    }
 
@@ -228,10 +252,10 @@ public class Nest
    // Clear.
    public void clear()
    {
-      if (dashboard != null)
+      if (display != null)
       {
-         dashboard.close();
-         dashboard = null;
+         display.close();
+         display = null;
       }
       nestCells = null;
       moxen     = null;
@@ -260,9 +284,6 @@ public class Nest
    public void save(FileOutputStream output) throws IOException
    {
       PrintWriter writer = new PrintWriter(output);
-
-      // Save  types.
-      Utility.saveInt(writer, numLandmarkTypes);
 
       // Save cells.
       nestCells.save(output);
@@ -302,9 +323,6 @@ public class Nest
    {
       DataInputStream reader = new DataInputStream(input);
 
-      // Load  types.
-      numLandmarkTypes = Utility.loadInt(reader);
-
       // Load cells.
       nestCells = new NestCells();
       nestCells.load(input);
@@ -323,28 +341,19 @@ public class Nest
 
 
    // Run.
-   // Return count of remaining food.
-   public int run(int steps)
+   public void run(int steps)
    {
       if (steps >= 0)
       {
-         for (int i = 0; i < steps && nestCells.countFood() > 0; i++)
+         stepMoxen();
+      }
+      else
+      {
+         for (int i = 0; updateDisplay(i); i++)
          {
             stepMoxen();
          }
       }
-      else
-      {
-         for (int i = 0; updateDashboard(i); )
-         {
-            if (nestCells.countFood() > 0)
-            {
-               stepMoxen();
-               i++;
-            }
-         }
-      }
-      return(nestCells.countFood());
    }
 
 
@@ -369,21 +378,29 @@ public class Nest
    void stepMox(int moxIndex)
    {
       int fx, fy, lx, ly, rx, ry, width, height;
-      int landmarkIndex, foodIndex;
+      int stoneIndex, elevationIndex;
 
       int        response;
       NestingMox mox;
 
-      float[] sensors        = new float[NestingMox.NUM_SENSORS];
-      landmarkIndex          = NestingMoxDashboard.LANDMARK_SENSOR_INDEX;
-      foodIndex              = NestingMoxDashboard.FOOD_SENSOR_INDEX;
-      sensors[landmarkIndex] = 0.0f;
-      sensors[foodIndex]     = 0.0f;
+      float[] sensors         = new float[NestingMox.NUM_SENSORS];
+      stoneIndex              = NestingMox.STONE_SENSOR_INDEX;
+      elevationIndex          = NestingMox.ELEVATION_SENSOR_INDEX;
+      sensors[stoneIndex]     = 0.0f;
+      sensors[elevationIndex] = 0.0f;
       width  = nestCells.size.width;
       height = nestCells.size.height;
       mox    = moxen.get(moxIndex);
 
-      // Detect object ahead.
+      // Update landmarks.
+      mox.landmarkMap[mox.x][mox.y] = true;
+
+      // Cycle mox.
+      sensors[stoneIndex] = (float)nestCells.cells[mox.x][mox.y][NestCells.STONE_CELL_INDEX];
+      sensors[stoneIndex] = (float)nestCells.cells[mox.x][mox.y][NestCells.ELEVATION_CELL_INDEX];
+      response            = mox.cycle(sensors);
+
+      // Process response.
       switch (mox.direction)
       {
       case Orientation.NORTH:
@@ -432,31 +449,11 @@ public class Nest
          fx = fy = lx = ly = rx = ry = -1;
          break;
       }
-      if (nestCells.cells[fx][fy] != MoxWorx.EMPTY_CELL_VALUE)
-      {
-         sensors[landmarkIndex] = 1.0f;
-      }
-      if (nestCells.cells[fx][fy] >= NestCells.LANDMARK_CELLS_BEGIN_VALUE)
-      {
-         mox.landmarkMap[fx][fy] = true;
-      }
 
-      // Detect food.
-      sensors[foodIndex] = 1.0f / ((float)nestCells.foodDist(fx, fy) + 1.0f);
-
-      // Cycle mox.
-      response = mox.cycle(sensors, fx, fy);
-
-      // Process response.
       if (response == NestingMox.FORWARD)
       {
-         if (nestCells.cells[fx][fy] == MoxWorx.EMPTY_CELL_VALUE)
-         {
-            nestCells.cells[mox.x][mox.y] = MoxWorx.EMPTY_CELL_VALUE;
-            mox.x = fx;
-            mox.y = fy;
-            nestCells.cells[mox.x][mox.y] = NestCells.MOX_CELL_VALUE;
-         }
+         mox.x = fx;
+         mox.y = fy;
       }
       else if (response == NestingMox.RIGHT)
       {
@@ -470,54 +467,69 @@ public class Nest
             mox.direction = mox.direction + Orientation.NUM_ORIENTATIONS;
          }
       }
-      else if (response == NestingMox.EAT)
+      else if (response == NestingMox.TAKE_STONE)
       {
-         if (nestCells.cells[fx][fy] == NestCells.FOOD_CELL_VALUE)
+         if (!mox.hasStone)
          {
-            nestCells.cells[fx][fy] = MoxWorx.EMPTY_CELL_VALUE;
+            if (nestCells.cells[mox.x][mox.y][NestCells.STONE_CELL_INDEX] == NestCells.STONE_CELL_VALUE)
+            {
+               nestCells.cells[mox.x][mox.y][NestCells.STONE_CELL_INDEX] = MoxWorx.EMPTY_CELL_VALUE;
+               mox.hasStone = true;
+            }
+         }
+      }
+      else if (response == NestingMox.DROP_STONE)
+      {
+         if (mox.hasStone)
+         {
+            if (nestCells.cells[mox.x][mox.y][NestCells.STONE_CELL_INDEX] != NestCells.STONE_CELL_VALUE)
+            {
+               nestCells.cells[mox.x][mox.y][NestCells.STONE_CELL_INDEX] = NestCells.STONE_CELL_VALUE;
+               mox.hasStone = false;
+            }
          }
       }
    }
 
 
-   // Create dashboard.
-   public void createDashboard()
+   // Create display.
+   public void createDisplay()
    {
-      if (dashboard == null)
+      if (display == null)
       {
          if (moxen == null)
          {
-            dashboard = new NestDashboard(nestCells, numLandmarkTypes);
+            display = new NestDisplay(nestCells);
          }
          else
          {
-            dashboard = new NestDashboard(nestCells, numLandmarkTypes, moxen);
+            display = new NestDisplay(nestCells, moxen);
          }
       }
    }
 
 
-   // Destroy dashboard.
-   public void destroyDashboard()
+   // Destroy display.
+   public void destroyDisplay()
    {
-      if (dashboard != null)
+      if (display != null)
       {
-         dashboard.close();
-         dashboard = null;
+         display.close();
+         display = null;
       }
    }
 
 
-   // Update dashboard.
-   // Return false for dashboard quit.
-   public boolean updateDashboard(int steps)
+   // Update display.
+   // Return false for display quit.
+   public boolean updateDisplay(int steps)
    {
-      if (dashboard != null)
+      if (display != null)
       {
-         dashboard.update(steps);
-         if (dashboard.quit)
+         display.update(steps);
+         if (display.quit)
          {
-            dashboard = null;
+            display = null;
             return(false);
          }
          else
@@ -545,13 +557,11 @@ public class Nest
       int     height            = -1;
       int     driver            = NestingMox.DRIVER_TYPE.AUTOPILOT.getValue();
       int     numMoxen          = -1;
-      int     numLandmarkTypes  = -1;
-      int     numLandmarks      = -1;
-      int     numFoods          = -1;
+      int     numStones         = -1;
       int     randomSeed        = DEFAULT_RANDOM_SEED;
       String  loadfile          = null;
       String  savefile          = null;
-      boolean dashboard         = false;
+      boolean display           = false;
       boolean gotParm           = false;
       int     NUM_NEIGHBORHOODS = Morphognostic.DEFAULT_NUM_NEIGHBORHOODS;
       int     NEIGHBORHOOD_INITIAL_DIMENSION    = Morphognostic.DEFAULT_NEIGHBORHOOD_INITIAL_DIMENSION;
@@ -588,9 +598,9 @@ public class Nest
             }
             continue;
          }
-         if (args[i].equals("-dashboard"))
+         if (args[i].equals("-display"))
          {
-            dashboard = true;
+            display = true;
             continue;
          }
          if (args[i].equals("-dimensions"))
@@ -696,79 +706,27 @@ public class Nest
             }
             continue;
          }
-         if (args[i].equals("-numLandmarkTypes"))
+         if (args[i].equals("-numStones"))
          {
             i++;
             if (i >= args.length)
             {
-               System.err.println("Invalid numLandmarkTypes option");
+               System.err.println("Invalid numStones option");
                System.err.println(Nest.Usage);
                System.exit(2);
             }
             try
             {
-               numLandmarkTypes = Integer.parseInt(args[i]);
+               numStones = Integer.parseInt(args[i]);
             }
             catch (NumberFormatException e) {
-               System.err.println("Invalid numLandmarkTypes option");
+               System.err.println("Invalid numStones option");
                System.err.println(Nest.Usage);
                System.exit(2);
             }
-            if (numLandmarkTypes < 1)
+            if (numStones < 0)
             {
-               System.err.println("Invalid numLandmarkTypes option");
-               System.err.println(Nest.Usage);
-               System.exit(2);
-            }
-            continue;
-         }
-         if (args[i].equals("-numLandmarks"))
-         {
-            i++;
-            if (i >= args.length)
-            {
-               System.err.println("Invalid numLandmarks option");
-               System.err.println(Nest.Usage);
-               System.exit(2);
-            }
-            try
-            {
-               numLandmarks = Integer.parseInt(args[i]);
-            }
-            catch (NumberFormatException e) {
-               System.err.println("Invalid numLandmarks option");
-               System.err.println(Nest.Usage);
-               System.exit(2);
-            }
-            if (numLandmarks < 0)
-            {
-               System.err.println("Invalid numLandmarks option");
-               System.err.println(Nest.Usage);
-               System.exit(2);
-            }
-            continue;
-         }
-         if (args[i].equals("-numFoods"))
-         {
-            i++;
-            if (i >= args.length)
-            {
-               System.err.println("Invalid numFoods option");
-               System.err.println(Nest.Usage);
-               System.exit(2);
-            }
-            try
-            {
-               numFoods = Integer.parseInt(args[i]);
-            }
-            catch (NumberFormatException e) {
-               System.err.println("Invalid numFoods option");
-               System.err.println(Nest.Usage);
-               System.exit(2);
-            }
-            if (numFoods < 0)
-            {
-               System.err.println("Invalid numFoods option");
+               System.err.println("Invalid numStones option");
                System.err.println(Nest.Usage);
                System.exit(2);
             }
@@ -1004,16 +962,16 @@ public class Nest
       }
 
       // Check options.
-      if (((steps < 0) && !dashboard) || ((steps >= 0) && dashboard))
+      if (((steps < 0) && !display) || ((steps >= 0) && display))
       {
          System.err.println(Nest.Usage);
          System.exit(2);
       }
-      if (!dashboard)
+      if (!display)
       {
          if (driver == NestingMox.DRIVER_TYPE.MANUAL.getValue())
          {
-            System.err.println("Cannot run manually without dashboard");
+            System.err.println("Cannot run manually without display");
             System.err.println(Nest.Usage);
             System.exit(2);
          }
@@ -1026,14 +984,12 @@ public class Nest
             System.exit(2);
          }
          if (numMoxen == -1) { numMoxen = 0; }
-         if (numLandmarkTypes == -1) { numLandmarkTypes = 1; }
-         if (numLandmarks == -1) { numLandmarks = 0; }
-         if (numFoods == -1) { numFoods = 0; }
+         if (numStones == -1) { numStones = 0; }
       }
       else
       {
-         if ((numMoxen != -1) || (numLandmarkTypes != -1) || (numLandmarks != -1) ||
-             (numFoods != -1) || (width != -1) || (height != -1) || gotParm)
+         if ((numMoxen != -1) || (numStones != -1) ||
+             (width != -1) || (height != -1) || gotParm)
          {
             System.err.println(Nest.Usage);
             System.exit(2);
@@ -1068,8 +1024,8 @@ public class Nest
       {
          try
          {
-            nest.initCells(width, height, numLandmarkTypes, numLandmarks, numFoods);
-            nest.createMoxen(numMoxen, numLandmarkTypes + 1,
+            nest.initCells(width, height, numStones);
+            nest.createMoxen(numMoxen,
                              NUM_NEIGHBORHOODS,
                              NEIGHBORHOOD_INITIAL_DIMENSION,
                              NEIGHBORHOOD_DIMENSION_STRIDE,
@@ -1084,10 +1040,16 @@ public class Nest
          }
       }
 
-      // Create dashboard?
-      if (dashboard)
+      // Create display?
+      SectorDisplay.graduatedColors = new boolean[NestCells.CELL_DIMENSIONS];
+      SectorDisplay.graduatedColors[NestCells.STONE_CELL_INDEX]     = false;
+      SectorDisplay.graduatedColors[NestCells.ELEVATION_CELL_INDEX] = true;
+      SectorDisplay.graduatedColorMaximums = new int[NestCells.CELL_DIMENSIONS];
+      SectorDisplay.graduatedColorMaximums[NestCells.ELEVATION_CELL_INDEX] =
+         NestCells.NUM_ELEVATION_VALUES - 1;
+      if (display)
       {
-         nest.createDashboard();
+         nest.createDisplay();
       }
       else
       {
@@ -1113,7 +1075,7 @@ public class Nest
       }
 
       // Run.
-      int foodCount = nest.run(steps);
+      nest.run(steps);
 
       // Save?
       if (savefile != null)
@@ -1126,14 +1088,6 @@ public class Nest
          {
             System.err.println("Cannot save to file " + savefile + ": " + e.getMessage());
          }
-      }
-      if (foodCount > 0)
-      {
-         System.exit(1);
-      }
-      else
-      {
-         System.exit(0);
       }
       System.exit(0);
    }

@@ -16,7 +16,7 @@ public class Forage
       "Usage:\n" +
       "  New run:\n" +
       "    java moxworx.Forage\n" +
-      "      -steps <steps> (stops when food consumed) | -dashboard\n" +
+      "      -steps <steps> (stops when food consumed) | -display\n" +
       "      -dimensions <width> <height>\n" +
       "     [-driver <metamorphDB | metamorphNN | autopilot> (mox driver: default=autopilot)]\n" +
       "     [-numMoxen <quantity> (default=0)]\n" +
@@ -33,7 +33,7 @@ public class Forage
       "     [-save <file name>]\n" +
       "  Resume run:\n" +
       "    java moxworx.Forage\n" +
-      "      -steps <steps> (stops when food consumed) | -dashboard\n" +
+      "      -steps <steps> (stops when food consumed) | -display\n" +
       "      -load <file name>\n" +
       "     [-driver <metamorphDB | metamorphNN | autopilot> (default=autopilot)]\n" +
       "     [-randomSeed <random number seed>]\n" +
@@ -55,8 +55,8 @@ public class Forage
    // Cells.
    ForageCells forageCells;
 
-   // Dashboard display.
-   ForageDashboard dashboard;
+   // Display.
+   ForageDisplay display;
 
    // Random numbers.
    Random random;
@@ -196,9 +196,9 @@ public class Forage
    public void setMoxen(ArrayList<ForagerMox> moxen)
    {
       this.moxen = moxen;
-      if (dashboard != null)
+      if (display != null)
       {
-         dashboard.setMoxen(moxen);
+         display.setMoxen(moxen);
       }
    }
 
@@ -218,9 +218,9 @@ public class Forage
             moxen.get(i).reset();
          }
       }
-      if (dashboard != null)
+      if (display != null)
       {
-         dashboard.close();
+         display.close();
       }
    }
 
@@ -228,10 +228,10 @@ public class Forage
    // Clear.
    public void clear()
    {
-      if (dashboard != null)
+      if (display != null)
       {
-         dashboard.close();
-         dashboard = null;
+         display.close();
+         display = null;
       }
       forageCells = null;
       moxen       = null;
@@ -335,7 +335,7 @@ public class Forage
       }
       else
       {
-         for (int i = 0; updateDashboard(i); )
+         for (int i = 0; updateDisplay(i); )
          {
             if (forageCells.countFood() > 0)
             {
@@ -480,44 +480,44 @@ public class Forage
    }
 
 
-   // Create dashboard.
-   public void createDashboard()
+   // Create display.
+   public void createDisplay()
    {
-      if (dashboard == null)
+      if (display == null)
       {
          if (moxen == null)
          {
-            dashboard = new ForageDashboard(forageCells, numLandmarkTypes);
+            display = new ForageDisplay(forageCells, numLandmarkTypes);
          }
          else
          {
-            dashboard = new ForageDashboard(forageCells, numLandmarkTypes, moxen);
+            display = new ForageDisplay(forageCells, numLandmarkTypes, moxen);
          }
       }
    }
 
 
-   // Destroy dashboard.
-   public void destroyDashboard()
+   // Destroy display.
+   public void destroyDisplay()
    {
-      if (dashboard != null)
+      if (display != null)
       {
-         dashboard.close();
-         dashboard = null;
+         display.close();
+         display = null;
       }
    }
 
 
-   // Update dashboard.
-   // Return false for dashboard quit.
-   public boolean updateDashboard(int steps)
+   // Update display.
+   // Return false for display quit.
+   public boolean updateDisplay(int steps)
    {
-      if (dashboard != null)
+      if (display != null)
       {
-         dashboard.update(steps);
-         if (dashboard.quit)
+         display.update(steps);
+         if (display.quit)
          {
-            dashboard = null;
+            display = null;
             return(false);
          }
          else
@@ -551,7 +551,7 @@ public class Forage
       int     randomSeed        = DEFAULT_RANDOM_SEED;
       String  loadfile          = null;
       String  savefile          = null;
-      boolean dashboard         = false;
+      boolean display           = false;
       boolean gotParm           = false;
       int     NUM_NEIGHBORHOODS = Morphognostic.DEFAULT_NUM_NEIGHBORHOODS;
       int     NEIGHBORHOOD_INITIAL_DIMENSION    = Morphognostic.DEFAULT_NEIGHBORHOOD_INITIAL_DIMENSION;
@@ -588,9 +588,9 @@ public class Forage
             }
             continue;
          }
-         if (args[i].equals("-dashboard"))
+         if (args[i].equals("-display"))
          {
-            dashboard = true;
+            display = true;
             continue;
          }
          if (args[i].equals("-dimensions"))
@@ -1004,16 +1004,16 @@ public class Forage
       }
 
       // Check options.
-      if (((steps < 0) && !dashboard) || ((steps >= 0) && dashboard))
+      if (((steps < 0) && !display) || ((steps >= 0) && display))
       {
          System.err.println(Forage.Usage);
          System.exit(2);
       }
-      if (!dashboard)
+      if (!display)
       {
          if (driver == ForagerMox.DRIVER_TYPE.MANUAL.getValue())
          {
-            System.err.println("Cannot run manually without dashboard");
+            System.err.println("Cannot run manually without display");
             System.err.println(Forage.Usage);
             System.exit(2);
          }
@@ -1084,10 +1084,10 @@ public class Forage
          }
       }
 
-      // Create dashboard?
-      if (dashboard)
+      // Create display?
+      if (display)
       {
-         forage.createDashboard();
+         forage.createDisplay();
       }
       else
       {
@@ -1135,6 +1135,5 @@ public class Forage
       {
          System.exit(0);
       }
-      System.exit(0);
    }
 }

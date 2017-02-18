@@ -12,26 +12,22 @@ public class NestingMoxDashboard extends JFrame
 {
    private static final long serialVersionUID = 0L;
 
-   // Sensor semantics.
-   static final int LANDMARK_SENSOR_INDEX = 0;
-   static final int FOOD_SENSOR_INDEX     = 1;
-
    // Components.
-   SensorsResponsePanel   sensorsResponse;
-   DriverPanel            driver;
-   MorphognosticDashboard morphognostic;
+   SensorsResponsePanel sensorsResponse;
+   DriverPanel          driver;
+   MorphognosticDisplay morphognostic;
 
    // Targets.
-   NestingMox    mox;
-   NestDashboard nestDashboard;
+   NestingMox  mox;
+   NestDisplay nestDisplay;
 
    // Constructor.
-   public NestingMoxDashboard(NestingMox mox, NestDashboard nestDashboard)
+   public NestingMoxDashboard(NestingMox mox, NestDisplay nestDisplay)
    {
-      this.mox           = mox;
-      this.nestDashboard = nestDashboard;
+      this.mox         = mox;
+      this.nestDisplay = nestDisplay;
 
-      setTitle("Nesting mox " + mox.id);
+      setTitle("Mox " + mox.id);
       addWindowListener(new WindowAdapter()
                         {
                            public void windowClosing(WindowEvent e) { close(); }
@@ -43,7 +39,7 @@ public class NestingMoxDashboard extends JFrame
       basePanel.add(sensorsResponse, BorderLayout.NORTH);
       driver = new DriverPanel();
       basePanel.add(driver, BorderLayout.CENTER);
-      morphognostic = new MorphognosticDashboard(mox.id, mox.morphognostic);
+      morphognostic = new MorphognosticDisplay(mox.id, mox.morphognostic);
       basePanel.add(morphognostic, BorderLayout.SOUTH);
       pack();
       setCenterLocation();
@@ -67,9 +63,8 @@ public class NestingMoxDashboard extends JFrame
    // Update dashboard.
    void update()
    {
-      float f = (float)((int)(mox.sensors[FOOD_SENSOR_INDEX] * 100.0f)) / 100.0f;
-
-      setSensors(mox.sensors[LANDMARK_SENSOR_INDEX] + "", f + "");
+      setSensors(mox.sensors[NestingMox.STONE_SENSOR_INDEX] + "",
+                 mox.sensors[NestingMox.ELEVATION_SENSOR_INDEX] + "");
       if (mox.response == NestingMox.WAIT)
       {
          setResponse("wait");
@@ -86,9 +81,13 @@ public class NestingMoxDashboard extends JFrame
       {
          setResponse("turn left");
       }
-      else if (mox.response == NestingMox.EAT)
+      else if (mox.response == NestingMox.TAKE_STONE)
       {
-         setResponse("eat");
+         setResponse("take stone");
+      }
+      else if (mox.response == NestingMox.DROP_STONE)
+      {
+         setResponse("drop stone");
       }
       else
       {
@@ -110,16 +109,16 @@ public class NestingMoxDashboard extends JFrame
    {
       morphognostic.close();
       setVisible(false);
-      nestDashboard.closeMoxDashboard();
+      nestDisplay.closeMoxDashboard();
    }
 
 
    // Set sensors display.
-   void setSensors(String landmarkSensorString,
-                   String foodSensorString)
+   void setSensors(String stoneSensorString,
+                   String elevationSensorString)
    {
-      sensorsResponse.landmarkText.setText(landmarkSensorString);
-      sensorsResponse.foodText.setText(foodSensorString);
+      sensorsResponse.stoneText.setText(stoneSensorString);
+      sensorsResponse.elevationText.setText(elevationSensorString);
    }
 
 
@@ -136,8 +135,8 @@ public class NestingMoxDashboard extends JFrame
       private static final long serialVersionUID = 0L;
 
       // Components.
-      JTextField landmarkText;
-      JTextField foodText;
+      JTextField stoneText;
+      JTextField elevationText;
       JTextField responseText;
 
       // Constructor.
@@ -150,20 +149,20 @@ public class NestingMoxDashboard extends JFrame
          JPanel sensorsPanel = new JPanel();
          sensorsPanel.setLayout(new BorderLayout());
          add(sensorsPanel, BorderLayout.NORTH);
-         JPanel landmarkPanel = new JPanel();
-         landmarkPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-         sensorsPanel.add(landmarkPanel, BorderLayout.NORTH);
-         landmarkPanel.add(new JLabel("Landmark:"));
-         landmarkText = new JTextField(10);
-         landmarkText.setEditable(false);
-         landmarkPanel.add(landmarkText);
-         JPanel foodPanel = new JPanel();
-         foodPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-         sensorsPanel.add(foodPanel, BorderLayout.CENTER);
-         foodPanel.add(new JLabel("Food:"));
-         foodText = new JTextField(10);
-         foodText.setEditable(false);
-         foodPanel.add(foodText);
+         JPanel stonePanel = new JPanel();
+         stonePanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+         sensorsPanel.add(stonePanel, BorderLayout.NORTH);
+         stonePanel.add(new JLabel("Stone:"));
+         stoneText = new JTextField(10);
+         stoneText.setEditable(false);
+         stonePanel.add(stoneText);
+         JPanel elevationPanel = new JPanel();
+         elevationPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+         sensorsPanel.add(elevationPanel, BorderLayout.CENTER);
+         elevationPanel.add(new JLabel("Elevation:"));
+         elevationText = new JTextField(10);
+         elevationText.setEditable(false);
+         elevationPanel.add(elevationText);
          JPanel responsePanel = new JPanel();
          responsePanel.setLayout(new FlowLayout(FlowLayout.LEFT));
          add(responsePanel, BorderLayout.SOUTH);
@@ -198,7 +197,8 @@ public class NestingMoxDashboard extends JFrame
       JButton  turnLeftButton;
       JButton  moveForwardButton;
       JButton  turnRightButton;
-      JButton  eatButton;
+      JButton  takeStoneButton;
+      JButton  dropStoneButton;
       Checkbox trainNNcheck;
 
       // Constructor.
@@ -230,9 +230,12 @@ public class NestingMoxDashboard extends JFrame
          turnRightButton = new JButton("Right");
          turnRightButton.addActionListener(this);
          responsePanel.add(turnRightButton);
-         eatButton = new JButton("Eat");
-         eatButton.addActionListener(this);
-         responsePanel.add(eatButton);
+         takeStoneButton = new JButton("Take");
+         takeStoneButton.addActionListener(this);
+         responsePanel.add(takeStoneButton);
+         dropStoneButton = new JButton("Drop");
+         dropStoneButton.addActionListener(this);
+         responsePanel.add(dropStoneButton);
          JPanel trainNNpanel = new JPanel();
          trainNNpanel.setLayout(new FlowLayout(FlowLayout.LEFT));
          add(trainNNpanel, BorderLayout.SOUTH);
@@ -264,7 +267,7 @@ public class NestingMoxDashboard extends JFrame
                }
                catch (Exception e)
                {
-                  nestDashboard.controls.messageText.setText("Cannot train metamorph NN: " + e.getMessage());
+                  nestDisplay.controls.messageText.setText("Cannot train metamorph NN: " + e.getMessage());
                }
                trainNNcheck.setState(false);
             }
@@ -294,9 +297,15 @@ public class NestingMoxDashboard extends JFrame
             return;
          }
 
-         if ((JButton)evt.getSource() == eatButton)
+         if ((JButton)evt.getSource() == takeStoneButton)
          {
-            mox.driverResponse = NestingMox.EAT;
+            mox.driverResponse = NestingMox.TAKE_STONE;
+            return;
+         }
+
+         if ((JButton)evt.getSource() == dropStoneButton)
+         {
+            mox.driverResponse = NestingMox.DROP_STONE;
             return;
          }
       }

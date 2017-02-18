@@ -24,8 +24,8 @@ public class NestingMox
    public int       id;
    public int       x, y;
    public int       direction;
+   public boolean   hasStone;
    public NestCells nestCells;
-   public int       numLandmarkTypes;
    public int       x2, y2;
    public int       direction2;
    public int       driver;
@@ -48,35 +48,45 @@ public class NestingMox
    int response;
 
    // Sensor dimensions.
-   public static final int NUM_SENSORS = 2;
+   public static final int NUM_SENSORS                = 3;
+   public static final int STONE_SENSOR_INDEX         = 0;
+   public static final int ELEVATION_SENSOR_INDEX     = 1;
+   public static final int CARRIED_STONE_SENSOR_INDEX = 2;
 
    // Response types.
    public static final int WAIT          = 0;
    public static final int FORWARD       = 1;
    public static final int RIGHT         = 2;
    public static final int LEFT          = 3;
-   public static final int EAT           = 4;
-   public static final int NUM_RESPONSES = 5;
+   public static final int TAKE_STONE    = 4;
+   public static final int DROP_STONE    = 5;
+   public static final int NUM_RESPONSES = 6;
 
    // Navigation.
    public boolean[][] landmarkMap;
-   public int         maxLandmarkEventAge;
-   public class LandmarkEvent
+   public int         maxEventAge;
+   public class Event
    {
-      public int value;
-      public int x;
-      public int y;
-      public int time;
-      public LandmarkEvent(int value, int x, int y, int time)
+      public int[] values;
+      public int   x;
+      public int   y;
+      public int   time;
+      public Event(int[] values, int x, int y, int time)
       {
-         this.value = value;
-         this.x     = x;
-         this.y     = y;
-         this.time  = time;
+         int n = values.length;
+
+         this.values = new int[n];
+         for (int i = 0; i < n; i++)
+         {
+            this.values[i] = values[i];
+         }
+         this.x    = x;
+         this.y    = y;
+         this.time = time;
       }
    }
-   public Vector<LandmarkEvent> landmarkEvents;
-   public int eventTime;
+   public Vector<Event> events;
+   public int           eventTime;
 
    // Driver type.
    public enum DRIVER_TYPE
@@ -100,21 +110,24 @@ public class NestingMox
    }
 
    // Constructors.
-   public NestingMox(int id, int x, int y, int direction, int numLandmarkTypes, NestCells nestCells)
+   public NestingMox(int id, int x, int y, int direction, NestCells nestCells)
    {
-      this.id               = id;
-      this.nestCells        = nestCells;
-      this.numLandmarkTypes = numLandmarkTypes;
+      this.id        = id;
+      this.nestCells = nestCells;
       init(x, y, direction);
-      morphognostic = new Morphognostic(direction, NestCells.LANDMARK_CELLS_BEGIN_VALUE, numLandmarkTypes);
+      int [] numEventTypes = new int[NUM_SENSORS];
+      numEventTypes[STONE_SENSOR_INDEX]         = NestCells.NUM_STONE_VALUES;
+      numEventTypes[ELEVATION_SENSOR_INDEX]     = NestCells.NUM_ELEVATION_VALUES;
+      numEventTypes[CARRIED_STONE_SENSOR_INDEX] = 2;
+      morphognostic = new Morphognostic(direction, numEventTypes);
       Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(morphognostic.NUM_NEIGHBORHOODS - 1);
-      maxLandmarkEventAge = n.epoch + n.duration - 1;
-      metamorphs          = new ArrayList<Metamorph>();
+      maxEventAge = n.epoch + n.duration - 1;
+      metamorphs  = new ArrayList<Metamorph>();
       initMetamorphNN();
    }
 
 
-   public NestingMox(int id, int x, int y, int direction, int numLandmarkTypes, NestCells nestCells,
+   public NestingMox(int id, int x, int y, int direction, NestCells nestCells,
                      int NUM_NEIGHBORHOODS,
                      int NEIGHBORHOOD_INITIAL_DIMENSION,
                      int NEIGHBORHOOD_DIMENSION_STRIDE,
@@ -122,11 +135,14 @@ public class NestingMox
                      int EPOCH_INTERVAL_STRIDE,
                      int EPOCH_INTERVAL_MULTIPLIER)
    {
-      this.id               = id;
-      this.nestCells        = nestCells;
-      this.numLandmarkTypes = numLandmarkTypes;
+      this.id        = id;
+      this.nestCells = nestCells;
       init(x, y, direction);
-      morphognostic = new Morphognostic(direction, NestCells.LANDMARK_CELLS_BEGIN_VALUE, numLandmarkTypes,
+      int [] numEventTypes = new int[NUM_SENSORS];
+      numEventTypes[STONE_SENSOR_INDEX]         = NestCells.NUM_STONE_VALUES;
+      numEventTypes[ELEVATION_SENSOR_INDEX]     = NestCells.NUM_ELEVATION_VALUES;
+      numEventTypes[CARRIED_STONE_SENSOR_INDEX] = 2;
+      morphognostic = new Morphognostic(direction, numEventTypes,
                                         NUM_NEIGHBORHOODS,
                                         NEIGHBORHOOD_INITIAL_DIMENSION,
                                         NEIGHBORHOOD_DIMENSION_STRIDE,
@@ -134,22 +150,25 @@ public class NestingMox
                                         EPOCH_INTERVAL_STRIDE,
                                         EPOCH_INTERVAL_MULTIPLIER);
       Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(morphognostic.NUM_NEIGHBORHOODS - 1);
-      maxLandmarkEventAge = n.epoch + n.duration - 1;
-      metamorphs          = new ArrayList<Metamorph>();
+      maxEventAge = n.epoch + n.duration - 1;
+      metamorphs  = new ArrayList<Metamorph>();
       initMetamorphNN();
    }
 
 
    public NestingMox(NestCells nestCells)
    {
-      id               = -1;
-      this.nestCells   = nestCells;
-      numLandmarkTypes = 1;
+      id             = -1;
+      this.nestCells = nestCells;
       init();
-      morphognostic = new Morphognostic(direction, NestCells.LANDMARK_CELLS_BEGIN_VALUE, numLandmarkTypes);
+      int [] numEventTypes = new int[NUM_SENSORS];
+      numEventTypes[STONE_SENSOR_INDEX]         = NestCells.NUM_STONE_VALUES;
+      numEventTypes[ELEVATION_SENSOR_INDEX]     = NestCells.NUM_ELEVATION_VALUES;
+      numEventTypes[CARRIED_STONE_SENSOR_INDEX] = 2;
+      morphognostic = new Morphognostic(direction, numEventTypes);
       Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(morphognostic.NUM_NEIGHBORHOODS - 1);
-      maxLandmarkEventAge = n.epoch + n.duration - 1;
-      metamorphs          = new ArrayList<Metamorph>();
+      maxEventAge = n.epoch + n.duration - 1;
+      metamorphs  = new ArrayList<Metamorph>();
       initMetamorphNN();
    }
 
@@ -160,10 +179,11 @@ public class NestingMox
       this.x         = x2 = x;
       this.y         = y2 = y;
       this.direction = direction2 = direction;
+      hasStone       = false;
       sensors        = new float[NUM_SENSORS];
-      for (int i = 0; i < NUM_SENSORS; i++)
+      for (int n = 0; n < NUM_SENSORS; n++)
       {
-         sensors[i] = 0.0f;
+         sensors[n] = 0.0f;
       }
       response       = WAIT;
       driver         = DRIVER_TYPE.METAMORPH_DB.getValue();
@@ -176,8 +196,8 @@ public class NestingMox
             landmarkMap[i][j] = false;
          }
       }
-      landmarkEvents = new Vector<LandmarkEvent>();
-      eventTime      = 0;
+      events    = new Vector<Event>();
+      eventTime = 0;
    }
 
 
@@ -206,7 +226,7 @@ public class NestingMox
             landmarkMap[i][j] = false;
          }
       }
-      landmarkEvents.clear();
+      events.clear();
       morphognostic.clear();
    }
 
@@ -238,12 +258,14 @@ public class NestingMox
       Utility.saveInt(writer, x);
       Utility.saveInt(writer, y);
       Utility.saveInt(writer, direction);
-      Utility.saveInt(writer, numLandmarkTypes);
+      int n = 0;
+      if (hasStone) { n = 1; }
+      Utility.saveInt(writer, n);
       Utility.saveInt(writer, x2);
       Utility.saveInt(writer, y2);
       Utility.saveInt(writer, direction2);
       morphognostic.save(output);
-      Utility.saveInt(writer, maxLandmarkEventAge);
+      Utility.saveInt(writer, maxEventAge);
       Utility.saveInt(writer, metamorphs.size());
       for (Metamorph m : metamorphs)
       {
@@ -278,18 +300,19 @@ public class NestingMox
       // DataInputStream is for unbuffered input.
       DataInputStream reader = new DataInputStream(input);
 
-      id                  = Utility.loadInt(reader);
-      x                   = Utility.loadInt(reader);
-      y                   = Utility.loadInt(reader);
-      direction           = Utility.loadInt(reader);
-      numLandmarkTypes    = Utility.loadInt(reader);
-      x2                  = Utility.loadInt(reader);
-      y2                  = Utility.loadInt(reader);
-      direction2          = Utility.loadInt(reader);
-      morphognostic       = Morphognostic.load(input);
-      maxLandmarkEventAge = Utility.loadInt(reader);
-      metamorphs.clear();
+      id        = Utility.loadInt(reader);
+      x         = Utility.loadInt(reader);
+      y         = Utility.loadInt(reader);
+      direction = Utility.loadInt(reader);
       int n = Utility.loadInt(reader);
+      if (n == 0) { hasStone = false; }else{ hasStone = true; }
+      x2            = Utility.loadInt(reader);
+      y2            = Utility.loadInt(reader);
+      direction2    = Utility.loadInt(reader);
+      morphognostic = Morphognostic.load(input);
+      maxEventAge   = Utility.loadInt(reader);
+      metamorphs.clear();
+      n = Utility.loadInt(reader);
       for (int i = 0; i < n; i++)
       {
          metamorphs.add(Metamorph.load(input));
@@ -299,42 +322,55 @@ public class NestingMox
 
 
    // Sensor/response cycle.
-   public int cycle(float[] sensors, int fx, int fy)
+   public int cycle(float[] sensors)
    {
-      this.sensors = sensors;
+      this.sensors[STONE_SENSOR_INDEX]     = sensors[STONE_SENSOR_INDEX];
+      this.sensors[ELEVATION_SENSOR_INDEX] = sensors[ELEVATION_SENSOR_INDEX];
+      if (hasStone)
+      {
+         this.sensors[CARRIED_STONE_SENSOR_INDEX] = 1.0f;
+      }
+      else
+      {
+         this.sensors[CARRIED_STONE_SENSOR_INDEX] = 0.0f;
+      }
 
       // Update morphognostic.
-      landmarkEvents.add(new LandmarkEvent(nestCells.cells[fx][fy], fx, fy, eventTime));
-      if ((eventTime - landmarkEvents.get(0).time) > maxLandmarkEventAge)
+      int[] values = new int[NUM_SENSORS];
+      for (int i = 0; i < NUM_SENSORS; i++)
       {
-         landmarkEvents.remove(0);
+         values[i] = (int)sensors[i];
+      }
+      events.add(new Event(values, x, y, eventTime));
+      if ((eventTime - events.get(0).time) > maxEventAge)
+      {
+         events.remove(0);
       }
       int w = nestCells.size.width;
       int h = nestCells.size.height;
-      int a = maxLandmarkEventAge + 1;
-      int landmarks[][][] = new int[w][h][a];
-      for (int x = 0; x < w; x++)
+      int a = maxEventAge + 1;
+      int morphEvents[][][][] = new int[w][h][NUM_SENSORS][a];
+      for (int x2 = 0; x2 < w; x2++)
       {
-         for (int y = 0; y < h; y++)
+         for (int y2 = 0; y2 < h; y2++)
          {
-            for (int t = 0; t < a; t++)
+            for (int n = 0; n < NUM_SENSORS; n++)
             {
-               landmarks[x][y][t] = -1;
+               for (int t = 0; t < a; t++)
+               {
+                  morphEvents[x2][y2][n][t] = -1;
+               }
             }
          }
       }
-      for (LandmarkEvent e : landmarkEvents)
+      for (Event e : events)
       {
-         if (e.value >= NestCells.LANDMARK_CELLS_BEGIN_VALUE)
+         for (int n = 0; n < NUM_SENSORS; n++)
          {
-            landmarks[e.x][e.y][eventTime - e.time] = e.value;
-         }
-         else
-         {
-            landmarks[e.x][e.y][eventTime - e.time] = MoxWorx.EMPTY_CELL_VALUE;
+            morphEvents[e.x][e.y][n][eventTime - e.time] = e.values[n];
          }
       }
-      morphognostic.update(landmarks, x, y);
+      morphognostic.update(morphEvents, x, y);
 
       // Respond.
       if (driver == DRIVER_TYPE.METAMORPH_DB.getValue())
@@ -408,24 +444,21 @@ public class NestingMox
    // Autopilot response.
    void autoResponse()
    {
-      // Search for best response leading to food.
-      int fx, fy;
+      // Search for best response leading to a stone.
       int left, right;
       int r;
-      int w = nestCells.size.width;
-      int h = nestCells.size.height;
 
-      ArrayList<FoodSearch> open   = new ArrayList<FoodSearch>();
-      ArrayList<FoodSearch> closed = new ArrayList<FoodSearch>();
+      ArrayList<StoneSearch> open   = new ArrayList<StoneSearch>();
+      ArrayList<StoneSearch> closed = new ArrayList<StoneSearch>();
       response = WAIT;
-      FoodSearch current = new FoodSearch(EAT, x, y, direction, 0);
-      if (current.foodDist == -1)
+      StoneSearch current = new StoneSearch(TAKE_STONE, x, y, direction, 0);
+      if (current.stoneDist == -1)
       {
          return;
       }
       open.add(current);
-      FoodSearch next;
-      boolean    found;
+      StoneSearch next;
+      boolean     found;
       while (open.size() > 0)
       {
          current = open.get(0);
@@ -434,57 +467,36 @@ public class NestingMox
          switch (current.dir)
          {
          case Orientation.NORTH:
-            fx    = current.x;
-            fy    = ((current.y + 1) % h);
             left  = Orientation.WEST;
             right = Orientation.EAST;
             break;
 
          case Orientation.EAST:
-            fx    = (current.x + 1) % w;
-            fy    = current.y;
             left  = Orientation.NORTH;
             right = Orientation.SOUTH;
             break;
 
          case Orientation.SOUTH:
-            fx = current.x;
-            fy = current.y - 1;
-            if (fy < 0) { fy += h; }
             left  = Orientation.EAST;
             right = Orientation.WEST;
             break;
 
          case Orientation.WEST:
-            fx = current.x - 1;
-            if (fx < 0) { fx += w; }
-            fy    = current.y;
             left  = Orientation.SOUTH;
             right = Orientation.NORTH;
             break;
 
          default:
-            fx    = -1;
-            fy    = -1;
             left  = Orientation.WEST;
             right = Orientation.EAST;
             break;
          }
-         if (nestCells.cells[fx][fy] == NestCells.FOOD_CELL_VALUE)
-         {
-            response = current.response;
-            return;
-         }
          r = current.response;
-         if (current.response == EAT)
+         if (!landmarkMap[current.x][current.y])
          {
-            r = FORWARD;
-         }
-         if (!landmarkMap[fx][fy])
-         {
-            next  = new FoodSearch(r, fx, fy, current.dir, current.depth + 1);
+            next  = new StoneSearch(r, current.x, current.y, current.dir, current.depth + 1);
             found = false;
-            for (FoodSearch s : closed)
+            for (StoneSearch s : closed)
             {
                if (next.equals(s))
                {
@@ -497,13 +509,9 @@ public class NestingMox
                open.add(next);
             }
          }
-         if (current.response == EAT)
-         {
-            r = LEFT;
-         }
-         next  = new FoodSearch(r, current.x, current.y, left, current.depth + 1);
+         next  = new StoneSearch(r, current.x, current.y, left, current.depth + 1);
          found = false;
-         for (FoodSearch s : closed)
+         for (StoneSearch s : closed)
          {
             if (next.equals(s))
             {
@@ -515,13 +523,9 @@ public class NestingMox
          {
             open.add(next);
          }
-         if (current.response == EAT)
-         {
-            r = RIGHT;
-         }
-         next  = new FoodSearch(r, current.x, current.y, right, current.depth + 1);
+         next  = new StoneSearch(r, current.x, current.y, right, current.depth + 1);
          found = false;
-         for (FoodSearch s : closed)
+         for (StoneSearch s : closed)
          {
             if (next.equals(s))
             {
@@ -538,29 +542,29 @@ public class NestingMox
    }
 
 
-   // Food search state.
-   class FoodSearch implements Comparable<FoodSearch>
+   // Stone search state.
+   class StoneSearch implements Comparable<StoneSearch>
    {
       int response;
       int x, y;
       int dir;
       int depth;
-      int foodDist;
+      int stoneDist;
 
       // Constructor.
-      FoodSearch(int response, int x, int y, int dir, int depth)
+      StoneSearch(int response, int x, int y, int dir, int depth)
       {
          this.response = response;
          this.x        = x;
          this.y        = y;
          this.dir      = dir;
          this.depth    = depth;
-         foodDist      = depth + nestCells.foodDist(x, y);
+         stoneDist     = depth + nestCells.stoneDist(x, y);
       }
 
 
       // Equal comparison.
-      boolean equals(FoodSearch s)
+      boolean equals(StoneSearch s)
       {
          if ((x == s.x) && (y == s.y) && (dir == s.dir))
          {
@@ -574,9 +578,9 @@ public class NestingMox
 
 
       @Override
-      public int compareTo(FoodSearch s)
+      public int compareTo(StoneSearch s)
       {
-         return(foodDist - s.foodDist);
+         return(stoneDist - s.stoneDist);
       }
    }
 
@@ -591,9 +595,12 @@ public class NestingMox
          {
             for (int y = 0; y < n; y++)
             {
-               for (int j = 0; j < morphognostic.numLandmarkTypes; j++)
+               for (int d = 0; d < morphognostic.eventDimensions; d++)
                {
-                  metamorphNNattributeNames.addElement(new Attribute(i + "-" + x + "-" + y + "-" + j));
+                  for (int j = 0; j < morphognostic.numEventTypes[d]; j++)
+                  {
+                     metamorphNNattributeNames.addElement(new Attribute(i + "-" + x + "-" + y + "-" + d + "-" + j));
+                  }
                }
             }
          }
@@ -669,10 +676,13 @@ public class NestingMox
             for (int y = 0; y < n; y++)
             {
                Morphognostic.Neighborhood.Sector s = m.morphognostic.neighborhoods.get(i).sectors[x][y];
-               for (int j = 0; j < s.typeDensities.length; j++)
+               for (int d = 0; d < m.morphognostic.eventDimensions; d++)
                {
-                  attrValues[a] = s.typeDensities[j];
-                  a++;
+                  for (int j = 0; j < s.typeDensities[d].length; j++)
+                  {
+                     attrValues[a] = s.typeDensities[d][j];
+                     a++;
+                  }
                }
             }
          }

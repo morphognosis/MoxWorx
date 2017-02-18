@@ -17,21 +17,21 @@ public class ForagerMoxDashboard extends JFrame
    static final int FOOD_SENSOR_INDEX     = 1;
 
    // Components.
-   SensorsResponsePanel   sensorsResponse;
-   DriverPanel            driver;
-   MorphognosticDashboard morphognostic;
+   SensorsResponsePanel sensorsResponse;
+   DriverPanel          driver;
+   MorphognosticDisplay morphognostic;
 
    // Targets.
-   ForagerMox      mox;
-   ForageDashboard forageDashboard;
+   ForagerMox    mox;
+   ForageDisplay forageDisplay;
 
    // Constructor.
-   public ForagerMoxDashboard(ForagerMox mox, ForageDashboard forageDashboard)
+   public ForagerMoxDashboard(ForagerMox mox, ForageDisplay forageDisplay)
    {
-      this.mox             = mox;
-      this.forageDashboard = forageDashboard;
+      this.mox           = mox;
+      this.forageDisplay = forageDisplay;
 
-      setTitle("Forager mox " + mox.id);
+      setTitle("Mox " + mox.id);
       addWindowListener(new WindowAdapter()
                         {
                            public void windowClosing(WindowEvent e) { close(); }
@@ -43,7 +43,7 @@ public class ForagerMoxDashboard extends JFrame
       basePanel.add(sensorsResponse, BorderLayout.NORTH);
       driver = new DriverPanel();
       basePanel.add(driver, BorderLayout.CENTER);
-      morphognostic = new MorphognosticDashboard(mox.id, mox.morphognostic);
+      morphognostic = new MorphognosticDisplay(mox.id, mox.morphognostic);
       basePanel.add(morphognostic, BorderLayout.SOUTH);
       pack();
       setCenterLocation();
@@ -110,7 +110,7 @@ public class ForagerMoxDashboard extends JFrame
    {
       morphognostic.close();
       setVisible(false);
-      forageDashboard.closeMoxDashboard();
+      forageDisplay.closeMoxDashboard();
    }
 
 
@@ -264,7 +264,7 @@ public class ForagerMoxDashboard extends JFrame
                }
                catch (Exception e)
                {
-                  forageDashboard.controls.messageText.setText("Cannot train metamorph NN: " + e.getMessage());
+                  forageDisplay.controls.messageText.setText("Cannot train metamorph NN: " + e.getMessage());
                }
                trainNNcheck.setState(false);
             }

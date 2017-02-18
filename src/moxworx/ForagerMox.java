@@ -106,7 +106,9 @@ public class ForagerMox
       this.forageCells      = forageCells;
       this.numLandmarkTypes = numLandmarkTypes;
       init(x, y, direction);
-      morphognostic = new Morphognostic(direction, ForageCells.LANDMARK_CELLS_BEGIN_VALUE, numLandmarkTypes);
+      int[] numEventTypes = new int[1];
+      numEventTypes[0]    = numLandmarkTypes;
+      morphognostic       = new Morphognostic(direction, numEventTypes);
       Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(morphognostic.NUM_NEIGHBORHOODS - 1);
       maxLandmarkEventAge = n.epoch + n.duration - 1;
       metamorphs          = new ArrayList<Metamorph>();
@@ -126,13 +128,15 @@ public class ForagerMox
       this.forageCells      = forageCells;
       this.numLandmarkTypes = numLandmarkTypes;
       init(x, y, direction);
-      morphognostic = new Morphognostic(direction, ForageCells.LANDMARK_CELLS_BEGIN_VALUE, numLandmarkTypes,
-                                        NUM_NEIGHBORHOODS,
-                                        NEIGHBORHOOD_INITIAL_DIMENSION,
-                                        NEIGHBORHOOD_DIMENSION_STRIDE,
-                                        NEIGHBORHOOD_DIMENSION_MULTIPLIER,
-                                        EPOCH_INTERVAL_STRIDE,
-                                        EPOCH_INTERVAL_MULTIPLIER);
+      int[] numEventTypes = new int[1];
+      numEventTypes[0]    = numLandmarkTypes;
+      morphognostic       = new Morphognostic(direction, numEventTypes,
+                                              NUM_NEIGHBORHOODS,
+                                              NEIGHBORHOOD_INITIAL_DIMENSION,
+                                              NEIGHBORHOOD_DIMENSION_STRIDE,
+                                              NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                                              EPOCH_INTERVAL_STRIDE,
+                                              EPOCH_INTERVAL_MULTIPLIER);
       Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(morphognostic.NUM_NEIGHBORHOODS - 1);
       maxLandmarkEventAge = n.epoch + n.duration - 1;
       metamorphs          = new ArrayList<Metamorph>();
@@ -146,7 +150,9 @@ public class ForagerMox
       this.forageCells = forageCells;
       numLandmarkTypes = 1;
       init();
-      morphognostic = new Morphognostic(direction, ForageCells.LANDMARK_CELLS_BEGIN_VALUE, numLandmarkTypes);
+      int[] numEventTypes = new int[1];
+      numEventTypes[0]    = numLandmarkTypes;
+      morphognostic       = new Morphognostic(direction, numEventTypes);
       Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(morphognostic.NUM_NEIGHBORHOODS - 1);
       maxLandmarkEventAge = n.epoch + n.duration - 1;
       metamorphs          = new ArrayList<Metamorph>();
@@ -312,14 +318,14 @@ public class ForagerMox
       int w = forageCells.size.width;
       int h = forageCells.size.height;
       int a = maxLandmarkEventAge + 1;
-      int landmarks[][][] = new int[w][h][a];
+      int landmarks[][][][] = new int[w][h][1][a];
       for (int x = 0; x < w; x++)
       {
          for (int y = 0; y < h; y++)
          {
             for (int t = 0; t < a; t++)
             {
-               landmarks[x][y][t] = -1;
+               landmarks[x][y][0][t] = -1;
             }
          }
       }
@@ -327,11 +333,12 @@ public class ForagerMox
       {
          if (e.value >= ForageCells.LANDMARK_CELLS_BEGIN_VALUE)
          {
-            landmarks[e.x][e.y][eventTime - e.time] = e.value;
+            landmarks[e.x][e.y][0][eventTime - e.time] =
+               e.value - ForageCells.LANDMARK_CELLS_BEGIN_VALUE + 1;
          }
          else
          {
-            landmarks[e.x][e.y][eventTime - e.time] = MoxWorx.EMPTY_CELL_VALUE;
+            landmarks[e.x][e.y][0][eventTime - e.time] = MoxWorx.EMPTY_CELL_VALUE;
          }
       }
       morphognostic.update(landmarks, x, y);
@@ -591,9 +598,12 @@ public class ForagerMox
          {
             for (int y = 0; y < n; y++)
             {
-               for (int j = 0; j < morphognostic.numLandmarkTypes; j++)
+               for (int d = 0; d < morphognostic.eventDimensions; d++)
                {
-                  metamorphNNattributeNames.addElement(new Attribute(i + "-" + x + "-" + y + "-" + j));
+                  for (int j = 0; j < morphognostic.numEventTypes[d]; j++)
+                  {
+                     metamorphNNattributeNames.addElement(new Attribute(i + "-" + x + "-" + y + "-" + d + "-" + j));
+                  }
                }
             }
          }
@@ -669,10 +679,13 @@ public class ForagerMox
             for (int y = 0; y < n; y++)
             {
                Morphognostic.Neighborhood.Sector s = m.morphognostic.neighborhoods.get(i).sectors[x][y];
-               for (int j = 0; j < s.typeDensities.length; j++)
+               for (int d = 0; d < m.morphognostic.eventDimensions; d++)
                {
-                  attrValues[a] = s.typeDensities[j];
-                  a++;
+                  for (int j = 0; j < s.typeDensities[d].length; j++)
+                  {
+                     attrValues[a] = s.typeDensities[d][j];
+                     a++;
+                  }
                }
             }
          }
