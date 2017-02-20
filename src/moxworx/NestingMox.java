@@ -6,7 +6,7 @@ package moxworx;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Random;
 import java.util.Vector;
 import weka.classifiers.Evaluation;
 import weka.classifiers.functions.MultilayerPerceptron;
@@ -30,6 +30,8 @@ public class NestingMox
    public int       direction2;
    public int       driver;
    public int       driverResponse;
+   public int       randomSeed;
+   public Random    random;
 
    // Current morphognostic.
    public Morphognostic morphognostic;
@@ -48,10 +50,20 @@ public class NestingMox
    int response;
 
    // Sensor dimensions.
-   public static final int NUM_SENSORS                = 3;
-   public static final int STONE_SENSOR_INDEX         = 0;
-   public static final int ELEVATION_SENSOR_INDEX     = 1;
-   public static final int CARRIED_STONE_SENSOR_INDEX = 2;
+   public static final int NUM_SENSORS = 4;
+   public static final int STONE_AHEAD_SENSOR_INDEX      = 0;
+   public static final int FORWARD_GRADIENT_SENSOR_INDEX = 1;
+   public static final int LATERAL_GRADIENT_SENSOR_INDEX = 2;
+   public static final int CARRIED_STONE_SENSOR_INDEX    = 3;
+
+   // Gradient sensor values.
+   public static final int FLAT_GRADIENT         = 0;
+   public static final int PEAK_GRADIENT         = 1;
+   public static final int FORWARD_UP_GRADIENT   = 2;
+   public static final int FORWARD_DOWN_GRADIENT = 3;
+   public static final int LEFT_UP_GRADIENT      = 2;
+   public static final int RIGHT_UP_GRADIENT     = 3;
+   public static final int NUM_GRADIENT_VALUES   = 4;
 
    // Response types.
    public static final int WAIT          = 0;
@@ -110,15 +122,18 @@ public class NestingMox
    }
 
    // Constructors.
-   public NestingMox(int id, int x, int y, int direction, NestCells nestCells)
+   public NestingMox(int id, int x, int y, int direction, NestCells nestCells, int randomSeed)
    {
-      this.id        = id;
-      this.nestCells = nestCells;
+      this.id         = id;
+      this.nestCells  = nestCells;
+      this.randomSeed = randomSeed;
+      random          = new Random(randomSeed);
       init(x, y, direction);
       int [] numEventTypes = new int[NUM_SENSORS];
-      numEventTypes[STONE_SENSOR_INDEX]         = NestCells.NUM_STONE_VALUES;
-      numEventTypes[ELEVATION_SENSOR_INDEX]     = NestCells.NUM_ELEVATION_VALUES;
-      numEventTypes[CARRIED_STONE_SENSOR_INDEX] = 2;
+      numEventTypes[STONE_AHEAD_SENSOR_INDEX]      = NestCells.NUM_STONE_VALUES;
+      numEventTypes[FORWARD_GRADIENT_SENSOR_INDEX] = NUM_GRADIENT_VALUES;
+      numEventTypes[LATERAL_GRADIENT_SENSOR_INDEX] = NUM_GRADIENT_VALUES;
+      numEventTypes[CARRIED_STONE_SENSOR_INDEX]    = 2;
       morphognostic = new Morphognostic(direction, numEventTypes);
       Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(morphognostic.NUM_NEIGHBORHOODS - 1);
       maxEventAge = n.epoch + n.duration - 1;
@@ -127,7 +142,7 @@ public class NestingMox
    }
 
 
-   public NestingMox(int id, int x, int y, int direction, NestCells nestCells,
+   public NestingMox(int id, int x, int y, int direction, NestCells nestCells, int randomSeed,
                      int NUM_NEIGHBORHOODS,
                      int NEIGHBORHOOD_INITIAL_DIMENSION,
                      int NEIGHBORHOOD_DIMENSION_STRIDE,
@@ -135,13 +150,16 @@ public class NestingMox
                      int EPOCH_INTERVAL_STRIDE,
                      int EPOCH_INTERVAL_MULTIPLIER)
    {
-      this.id        = id;
-      this.nestCells = nestCells;
+      this.id         = id;
+      this.nestCells  = nestCells;
+      this.randomSeed = randomSeed;
+      random          = new Random(randomSeed);
       init(x, y, direction);
       int [] numEventTypes = new int[NUM_SENSORS];
-      numEventTypes[STONE_SENSOR_INDEX]         = NestCells.NUM_STONE_VALUES;
-      numEventTypes[ELEVATION_SENSOR_INDEX]     = NestCells.NUM_ELEVATION_VALUES;
-      numEventTypes[CARRIED_STONE_SENSOR_INDEX] = 2;
+      numEventTypes[STONE_AHEAD_SENSOR_INDEX]      = NestCells.NUM_STONE_VALUES;
+      numEventTypes[FORWARD_GRADIENT_SENSOR_INDEX] = NUM_GRADIENT_VALUES;
+      numEventTypes[LATERAL_GRADIENT_SENSOR_INDEX] = NUM_GRADIENT_VALUES;
+      numEventTypes[CARRIED_STONE_SENSOR_INDEX]    = 2;
       morphognostic = new Morphognostic(direction, numEventTypes,
                                         NUM_NEIGHBORHOODS,
                                         NEIGHBORHOOD_INITIAL_DIMENSION,
@@ -156,15 +174,18 @@ public class NestingMox
    }
 
 
-   public NestingMox(NestCells nestCells)
+   public NestingMox(NestCells nestCells, int randomSeed)
    {
-      id             = -1;
-      this.nestCells = nestCells;
+      id              = -1;
+      this.nestCells  = nestCells;
+      this.randomSeed = randomSeed;
+      random          = new Random(randomSeed);
       init();
       int [] numEventTypes = new int[NUM_SENSORS];
-      numEventTypes[STONE_SENSOR_INDEX]         = NestCells.NUM_STONE_VALUES;
-      numEventTypes[ELEVATION_SENSOR_INDEX]     = NestCells.NUM_ELEVATION_VALUES;
-      numEventTypes[CARRIED_STONE_SENSOR_INDEX] = 2;
+      numEventTypes[STONE_AHEAD_SENSOR_INDEX]      = NestCells.NUM_STONE_VALUES;
+      numEventTypes[FORWARD_GRADIENT_SENSOR_INDEX] = NUM_GRADIENT_VALUES;
+      numEventTypes[LATERAL_GRADIENT_SENSOR_INDEX] = NUM_GRADIENT_VALUES;
+      numEventTypes[CARRIED_STONE_SENSOR_INDEX]    = 2;
       morphognostic = new Morphognostic(direction, numEventTypes);
       Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(morphognostic.NUM_NEIGHBORHOODS - 1);
       maxEventAge = n.epoch + n.duration - 1;
@@ -210,6 +231,7 @@ public class NestingMox
    // Reset state.
    void reset()
    {
+      random.setSeed(randomSeed);
       x         = x2;
       y         = y2;
       direction = direction2;
@@ -324,8 +346,9 @@ public class NestingMox
    // Sensor/response cycle.
    public int cycle(float[] sensors)
    {
-      this.sensors[STONE_SENSOR_INDEX]     = sensors[STONE_SENSOR_INDEX];
-      this.sensors[ELEVATION_SENSOR_INDEX] = sensors[ELEVATION_SENSOR_INDEX];
+      this.sensors[STONE_AHEAD_SENSOR_INDEX]      = sensors[STONE_AHEAD_SENSOR_INDEX];
+      this.sensors[FORWARD_GRADIENT_SENSOR_INDEX] = sensors[FORWARD_GRADIENT_SENSOR_INDEX];
+      this.sensors[LATERAL_GRADIENT_SENSOR_INDEX] = sensors[LATERAL_GRADIENT_SENSOR_INDEX];
       if (hasStone)
       {
          this.sensors[CARRIED_STONE_SENSOR_INDEX] = 1.0f;
@@ -339,7 +362,7 @@ public class NestingMox
       int[] values = new int[NUM_SENSORS];
       for (int i = 0; i < NUM_SENSORS; i++)
       {
-         values[i] = (int)sensors[i];
+         values[i] = (int)this.sensors[i];
       }
       events.add(new Event(values, x, y, eventTime));
       if ((eventTime - events.get(0).time) > maxEventAge)
@@ -426,6 +449,17 @@ public class NestingMox
             d         = d2;
             metamorph = m;
          }
+         else
+         {
+            if (d2 == d)
+            {
+               if (random.nextBoolean())
+               {
+                  d         = d2;
+                  metamorph = m;
+               }
+            }
+         }
       }
       if (metamorph != null)
       {
@@ -444,145 +478,181 @@ public class NestingMox
    // Autopilot response.
    void autoResponse()
    {
-      // Search for best response leading to a stone.
-      int left, right;
-      int r;
-
-      ArrayList<StoneSearch> open   = new ArrayList<StoneSearch>();
-      ArrayList<StoneSearch> closed = new ArrayList<StoneSearch>();
+      // Default response.
       response = WAIT;
-      StoneSearch current = new StoneSearch(TAKE_STONE, x, y, direction, 0);
-      if (current.stoneDist == -1)
+
+      // Mox has stone?
+      if (hasStone)
       {
+         // Returned to nest?
+         if ((sensors[FORWARD_GRADIENT_SENSOR_INDEX] == (int)PEAK_GRADIENT) &&
+             (sensors[LATERAL_GRADIENT_SENSOR_INDEX] == (int)PEAK_GRADIENT))
+         {
+            if (sensors[STONE_AHEAD_SENSOR_INDEX] == (int)NestCells.STONE_CELL_VALUE)
+            {
+               response = RIGHT;
+            }
+            else
+            {
+               response = DROP_STONE;
+            }
+            return;
+         }
+
+         // Return to nest.
+         switch ((int)sensors[FORWARD_GRADIENT_SENSOR_INDEX])
+         {
+         case FLAT_GRADIENT:
+            switch ((int)sensors[LATERAL_GRADIENT_SENSOR_INDEX])
+            {
+            case FLAT_GRADIENT:
+               randomMovement();
+               return;
+
+            case PEAK_GRADIENT:
+               randomMovement();
+               return;
+
+            case RIGHT_UP_GRADIENT:
+               response = RIGHT;
+               return;
+
+            case LEFT_UP_GRADIENT:
+               response = LEFT;
+               return;
+            }
+            break;
+
+         case PEAK_GRADIENT:
+            switch ((int)sensors[LATERAL_GRADIENT_SENSOR_INDEX])
+            {
+            case FLAT_GRADIENT:
+               randomMovement();
+               return;
+
+            case PEAK_GRADIENT:
+               randomMovement();
+               return;
+
+            case RIGHT_UP_GRADIENT:
+               response = RIGHT;
+               return;
+
+            case LEFT_UP_GRADIENT:
+               response = LEFT;
+               return;
+            }
+            break;
+
+         case FORWARD_UP_GRADIENT:
+            switch ((int)sensors[LATERAL_GRADIENT_SENSOR_INDEX])
+            {
+            case FLAT_GRADIENT:
+               response = FORWARD;
+               return;
+
+            case PEAK_GRADIENT:
+               response = FORWARD;
+               return;
+
+            case RIGHT_UP_GRADIENT:
+               if (random.nextBoolean())
+               {
+                  response = FORWARD;
+               }
+               else
+               {
+                  response = RIGHT;
+               }
+               return;
+
+            case LEFT_UP_GRADIENT:
+               if (random.nextBoolean())
+               {
+                  response = FORWARD;
+               }
+               else
+               {
+                  response = LEFT;
+               }
+               return;
+            }
+            break;
+
+         case FORWARD_DOWN_GRADIENT:
+            switch ((int)sensors[LATERAL_GRADIENT_SENSOR_INDEX])
+            {
+            case FLAT_GRADIENT:
+               response = RIGHT;
+               return;
+
+            case PEAK_GRADIENT:
+               response = RIGHT;
+               return;
+
+            case RIGHT_UP_GRADIENT:
+               response = RIGHT;
+               return;
+
+            case LEFT_UP_GRADIENT:
+               response = LEFT;
+               return;
+            }
+            break;
+         }
+      }
+      else
+      {
+         // Check nest?
+         if ((sensors[FORWARD_GRADIENT_SENSOR_INDEX] == (int)PEAK_GRADIENT) &&
+             (sensors[LATERAL_GRADIENT_SENSOR_INDEX] == (int)PEAK_GRADIENT))
+         {
+            if (sensors[STONE_AHEAD_SENSOR_INDEX] == (int)NestCells.STONE_CELL_VALUE)
+            {
+               response = RIGHT;
+            }
+            else
+            {
+               response = FORWARD;
+            }
+            return;
+         }
+
+         // Take stone?
+         if (sensors[STONE_AHEAD_SENSOR_INDEX] == (int)NestCells.STONE_CELL_VALUE)
+         {
+            response = TAKE_STONE;
+            return;
+         }
+
+         // Random search for stone.
+         randomMovement();
          return;
       }
-      open.add(current);
-      StoneSearch next;
-      boolean     found;
-      while (open.size() > 0)
-      {
-         current = open.get(0);
-         open.remove(0);
-         closed.add(current);
-         switch (current.dir)
-         {
-         case Orientation.NORTH:
-            left  = Orientation.WEST;
-            right = Orientation.EAST;
-            break;
-
-         case Orientation.EAST:
-            left  = Orientation.NORTH;
-            right = Orientation.SOUTH;
-            break;
-
-         case Orientation.SOUTH:
-            left  = Orientation.EAST;
-            right = Orientation.WEST;
-            break;
-
-         case Orientation.WEST:
-            left  = Orientation.SOUTH;
-            right = Orientation.NORTH;
-            break;
-
-         default:
-            left  = Orientation.WEST;
-            right = Orientation.EAST;
-            break;
-         }
-         r = current.response;
-         if (!landmarkMap[current.x][current.y])
-         {
-            next  = new StoneSearch(r, current.x, current.y, current.dir, current.depth + 1);
-            found = false;
-            for (StoneSearch s : closed)
-            {
-               if (next.equals(s))
-               {
-                  found = true;
-                  break;
-               }
-            }
-            if (!found)
-            {
-               open.add(next);
-            }
-         }
-         next  = new StoneSearch(r, current.x, current.y, left, current.depth + 1);
-         found = false;
-         for (StoneSearch s : closed)
-         {
-            if (next.equals(s))
-            {
-               found = true;
-               break;
-            }
-         }
-         if (!found)
-         {
-            open.add(next);
-         }
-         next  = new StoneSearch(r, current.x, current.y, right, current.depth + 1);
-         found = false;
-         for (StoneSearch s : closed)
-         {
-            if (next.equals(s))
-            {
-               found = true;
-               break;
-            }
-         }
-         if (!found)
-         {
-            open.add(next);
-         }
-         Collections.sort(open);
-      }
    }
 
 
-   // Stone search state.
-   class StoneSearch implements Comparable<StoneSearch>
+   // Random movement.
+   void randomMovement()
    {
-      int response;
-      int x, y;
-      int dir;
-      int depth;
-      int stoneDist;
-
-      // Constructor.
-      StoneSearch(int response, int x, int y, int dir, int depth)
+      switch (random.nextInt(5))
       {
-         this.response = response;
-         this.x        = x;
-         this.y        = y;
-         this.dir      = dir;
-         this.depth    = depth;
-         stoneDist     = depth + nestCells.stoneDist(x, y);
-      }
+      case 0:
+      case 1:
+      case 2:
+         response = FORWARD;
+         return;
 
+      case 3:
+         response = LEFT;
+         return;
 
-      // Equal comparison.
-      boolean equals(StoneSearch s)
-      {
-         if ((x == s.x) && (y == s.y) && (dir == s.dir))
-         {
-            return(true);
-         }
-         else
-         {
-            return(false);
-         }
-      }
-
-
-      @Override
-      public int compareTo(StoneSearch s)
-      {
-         return(stoneDist - s.stoneDist);
+      case 4:
+         response = RIGHT;
+         return;
       }
    }
+
 
    // Initialize metamorph neural network.
    public void initMetamorphNN()

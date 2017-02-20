@@ -243,7 +243,7 @@ public class SectorDisplay extends JFrame implements Runnable
          }
          else
          {
-            random.setSeed(dimension + 2);
+            random.setSeed(dimension + 3);
             float s = (float)eventType / (float)graduatedColorMaximums[dimension];
             int   r = 255 - (int)(255.0f * random.nextFloat() * s);
             int   g = 255 - (int)(255.0f * random.nextFloat() * s);

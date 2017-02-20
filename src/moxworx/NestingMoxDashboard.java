@@ -63,8 +63,43 @@ public class NestingMoxDashboard extends JFrame
    // Update dashboard.
    void update()
    {
-      setSensors(mox.sensors[NestingMox.STONE_SENSOR_INDEX] + "",
-                 mox.sensors[NestingMox.ELEVATION_SENSOR_INDEX] + "");
+      String forwardGradientString;
+
+      if (mox.sensors[NestingMox.FORWARD_GRADIENT_SENSOR_INDEX] == NestingMox.FLAT_GRADIENT)
+      {
+         forwardGradientString = "flat";
+      }
+      else if (mox.sensors[NestingMox.FORWARD_GRADIENT_SENSOR_INDEX] == NestingMox.PEAK_GRADIENT)
+      {
+         forwardGradientString = "peak";
+      }
+      else if (mox.sensors[NestingMox.FORWARD_GRADIENT_SENSOR_INDEX] == NestingMox.FORWARD_UP_GRADIENT)
+      {
+         forwardGradientString = "up";
+      }
+      else
+      {
+         forwardGradientString = "down";
+      }
+      String lateralGradientString;
+      if (mox.sensors[NestingMox.LATERAL_GRADIENT_SENSOR_INDEX] == NestingMox.FLAT_GRADIENT)
+      {
+         lateralGradientString = "flat";
+      }
+      else if (mox.sensors[NestingMox.LATERAL_GRADIENT_SENSOR_INDEX] == NestingMox.PEAK_GRADIENT)
+      {
+         lateralGradientString = "peak";
+      }
+      else if (mox.sensors[NestingMox.LATERAL_GRADIENT_SENSOR_INDEX] == NestingMox.RIGHT_UP_GRADIENT)
+      {
+         lateralGradientString = "right up";
+      }
+      else
+      {
+         lateralGradientString = "left up";
+      }
+      setSensors(mox.sensors[NestingMox.STONE_AHEAD_SENSOR_INDEX] + "",
+                 forwardGradientString, lateralGradientString);
       if (mox.response == NestingMox.WAIT)
       {
          setResponse("wait");
@@ -114,11 +149,21 @@ public class NestingMoxDashboard extends JFrame
 
 
    // Set sensors display.
-   void setSensors(String stoneSensorString,
-                   String elevationSensorString)
+   void setSensors(String stoneAheadSensorString,
+                   String forwardGradientSensorString,
+                   String lateralGradientSensorString)
    {
-      sensorsResponse.stoneText.setText(stoneSensorString);
-      sensorsResponse.elevationText.setText(elevationSensorString);
+      sensorsResponse.stoneAheadText.setText(stoneAheadSensorString);
+      sensorsResponse.forwardGradientText.setText(forwardGradientSensorString);
+      sensorsResponse.lateralGradientText.setText(lateralGradientSensorString);
+      if (mox.hasStone)
+      {
+         sensorsResponse.hasStoneText.setText("true");
+      }
+      else
+      {
+         sensorsResponse.hasStoneText.setText("false");
+      }
    }
 
 
@@ -135,8 +180,10 @@ public class NestingMoxDashboard extends JFrame
       private static final long serialVersionUID = 0L;
 
       // Components.
-      JTextField stoneText;
-      JTextField elevationText;
+      JTextField stoneAheadText;
+      JTextField hasStoneText;
+      JTextField forwardGradientText;
+      JTextField lateralGradientText;
       JTextField responseText;
 
       // Constructor.
@@ -152,17 +199,25 @@ public class NestingMoxDashboard extends JFrame
          JPanel stonePanel = new JPanel();
          stonePanel.setLayout(new FlowLayout(FlowLayout.LEFT));
          sensorsPanel.add(stonePanel, BorderLayout.NORTH);
-         stonePanel.add(new JLabel("Stone:"));
-         stoneText = new JTextField(10);
-         stoneText.setEditable(false);
-         stonePanel.add(stoneText);
-         JPanel elevationPanel = new JPanel();
-         elevationPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-         sensorsPanel.add(elevationPanel, BorderLayout.CENTER);
-         elevationPanel.add(new JLabel("Elevation:"));
-         elevationText = new JTextField(10);
-         elevationText.setEditable(false);
-         elevationPanel.add(elevationText);
+         stonePanel.add(new JLabel("Stone ahead:"));
+         stoneAheadText = new JTextField(10);
+         stoneAheadText.setEditable(false);
+         stonePanel.add(stoneAheadText);
+         stonePanel.add(new JLabel("Stone carried:"));
+         hasStoneText = new JTextField(10);
+         hasStoneText.setEditable(false);
+         stonePanel.add(hasStoneText);
+         JPanel gradientPanel = new JPanel();
+         gradientPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+         sensorsPanel.add(gradientPanel, BorderLayout.CENTER);
+         gradientPanel.add(new JLabel("Forward:"));
+         forwardGradientText = new JTextField(10);
+         forwardGradientText.setEditable(false);
+         gradientPanel.add(forwardGradientText);
+         gradientPanel.add(new JLabel("Lateral:"));
+         lateralGradientText = new JTextField(10);
+         lateralGradientText.setEditable(false);
+         gradientPanel.add(lateralGradientText);
          JPanel responsePanel = new JPanel();
          responsePanel.setLayout(new FlowLayout(FlowLayout.LEFT));
          add(responsePanel, BorderLayout.SOUTH);

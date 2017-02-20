@@ -19,8 +19,8 @@ public class Nest
       "      -steps <steps> (stops when food consumed) | -display\n" +
       "      -dimensions <width> <height>\n" +
       "     [-driver <metamorphDB | metamorphNN | autopilot> (mox driver: default=autopilot)]\n" +
-      "     [-numMoxen <quantity> (default=0)]\n" +
       "     [-numStones <quantity> (default=0)]\n" +
+      "     [-maxElevation <quantity> (default=" + NestCells.MAX_ELEVATION_VALUE + ")]\n" +
       "     [-numNeighborhoods <quantity> (default=" + Morphognostic.DEFAULT_NUM_NEIGHBORHOODS + ")]\n" +
       "     [-neighborhoodInitialDimension <quantity> (default=" + Morphognostic.DEFAULT_NEIGHBORHOOD_INITIAL_DIMENSION + ")]\n" +
       "     [-neighborhoodDimensionStride <quantity> (default=" + Morphognostic.DEFAULT_NEIGHBORHOOD_DIMENSION_STRIDE + ")]\n" +
@@ -54,105 +54,39 @@ public class Nest
    NestDisplay display;
 
    // Random numbers.
+   int    randomSeed;
    Random random;
 
    // Constructor.
-   public Nest()
+   public Nest(int randomSeed)
    {
+      this.randomSeed = randomSeed;
+      random          = new Random(randomSeed);
    }
 
 
-   // Initialize cells.
-   public void initCells(int width, int height, int numStones)
+   // Initialize.
+   public void init(int width, int height, int numStones,
+                    int NUM_NEIGHBORHOODS,
+                    int NEIGHBORHOOD_INITIAL_DIMENSION,
+                    int NEIGHBORHOOD_DIMENSION_STRIDE,
+                    int NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                    int EPOCH_INTERVAL_STRIDE,
+                    int EPOCH_INTERVAL_MULTIPLIER)
    {
-      int i, j, n, x, y;
-
       // Create cells.
-      nestCells = new NestCells(new Dimension(width, height));
-      for (x = 0; x < width; x++)
-      {
-         for (y = 0; y < height; y++)
-         {
-            nestCells.cells[x][y][NestCells.STONE_CELL_INDEX]               =
-               nestCells.restoreCells[x][y][NestCells.STONE_CELL_INDEX]     = MoxWorx.EMPTY_CELL_VALUE;
-            nestCells.cells[x][y][NestCells.ELEVATION_CELL_INDEX]           =
-               nestCells.restoreCells[x][y][NestCells.ELEVATION_CELL_INDEX] = MoxWorx.EMPTY_CELL_VALUE;
-         }
-      }
+      nestCells = new NestCells(new Dimension(width, height), numStones, randomSeed);
 
-      // Create stones.
-      n = 10;
-      for (i = 0; i < numStones; i++)
-      {
-         for (j = 0; j < n; j++)
-         {
-            x = random.nextInt(width);
-            y = random.nextInt(height);
-            if (nestCells.cells[x][y][NestCells.STONE_CELL_INDEX] == MoxWorx.EMPTY_CELL_VALUE)
-            {
-               nestCells.cells[x][y][NestCells.STONE_CELL_INDEX]           =
-                  nestCells.restoreCells[x][y][NestCells.STONE_CELL_INDEX] = NestCells.STONE_CELL_VALUE;
-               break;
-            }
-         }
-      }
-
-      // Set elevations.
-      x = random.nextInt(width - 2) + 1;
-      y = random.nextInt(height - 2) + 1;
-      nestCells.cells[x][y][NestCells.ELEVATION_CELL_INDEX]     = NestCells.NUM_ELEVATION_VALUES - 1;
-      nestCells.cells[x + 1][y][NestCells.ELEVATION_CELL_INDEX] = NestCells.NUM_ELEVATION_VALUES - 1;
-      nestCells.cells[x - 1][y][NestCells.ELEVATION_CELL_INDEX] = NestCells.NUM_ELEVATION_VALUES - 1;
-      nestCells.cells[x][y + 1][NestCells.ELEVATION_CELL_INDEX] = NestCells.NUM_ELEVATION_VALUES - 1;
-      nestCells.cells[x][y - 1][NestCells.ELEVATION_CELL_INDEX] = NestCells.NUM_ELEVATION_VALUES - 1;
-      for (i = NestCells.NUM_ELEVATION_VALUES - 1; i > MoxWorx.EMPTY_CELL_VALUE; i--)
-      {
-         for (x = 0; x < width; x++)
-         {
-            for (y = 0; y < height; y++)
-            {
-               int m = nestCells.cells[x][y][NestCells.ELEVATION_CELL_INDEX];
-               if (m < i)
-               {
-                  int x2 = x;
-                  int y2 = ((y + 1) % height);
-                  int m2 = nestCells.cells[x2][y2][NestCells.ELEVATION_CELL_INDEX];
-                  if (m2 == i)
-                  {
-                     nestCells.cells[x][y][NestCells.ELEVATION_CELL_INDEX] = i - 1;
-                     continue;
-                  }
-                  x2 = (x + 1) % width;
-                  y2 = y;
-                  m2 = nestCells.cells[x2][y2][NestCells.ELEVATION_CELL_INDEX];
-                  if (m2 == i)
-                  {
-                     nestCells.cells[x][y][NestCells.ELEVATION_CELL_INDEX] = i - 1;
-                     continue;
-                  }
-                  x2 = x;
-                  y2 = y - 1;
-                  if (y2 < 0) { y2 += height; }
-                  m2 = nestCells.cells[x2][y2][NestCells.ELEVATION_CELL_INDEX];
-                  if (m2 == i)
-                  {
-                     nestCells.cells[x][y][NestCells.ELEVATION_CELL_INDEX] = i - 1;
-                     continue;
-                  }
-                  x2 = x - 1;
-                  if (x2 < 0) { x2 += width; }
-                  y2 = y;
-                  m2 = nestCells.cells[x2][y2][NestCells.ELEVATION_CELL_INDEX];
-                  if (m2 == i)
-                  {
-                     nestCells.cells[x][y][NestCells.ELEVATION_CELL_INDEX] = i - 1;
-                     continue;
-                  }
-               }
-            }
-         }
-      }
-      nestCells.checkpoint();
+      // Create mox.
+      moxen = new ArrayList<NestingMox>();
+      moxen.add(0, new NestingMox(0, nestCells.nestX, nestCells.nestY,
+                                  Orientation.NORTH, nestCells, randomSeed,
+                                  NUM_NEIGHBORHOODS,
+                                  NEIGHBORHOOD_INITIAL_DIMENSION,
+                                  NEIGHBORHOOD_DIMENSION_STRIDE,
+                                  NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                                  EPOCH_INTERVAL_STRIDE,
+                                  EPOCH_INTERVAL_MULTIPLIER));
    }
 
 
@@ -184,38 +118,6 @@ public class Nest
    }
 
 
-   // Create moxen.
-   public void createMoxen(int numMoxen,
-                           int NUM_NEIGHBORHOODS,
-                           int NEIGHBORHOOD_INITIAL_DIMENSION,
-                           int NEIGHBORHOOD_DIMENSION_STRIDE,
-                           int NEIGHBORHOOD_DIMENSION_MULTIPLIER,
-                           int EPOCH_INTERVAL_STRIDE,
-                           int EPOCH_INTERVAL_MULTIPLIER)
-   {
-      int i, x, y, w, h;
-
-      // Create moxen.
-      w     = nestCells.size.width;
-      h     = nestCells.size.height;
-      moxen = new ArrayList<NestingMox>(numMoxen);
-      for (i = 0; i < numMoxen; i++)
-      {
-         x = random.nextInt(w);
-         y = random.nextInt(h);
-         int o = Orientation.NORTH;
-         o = random.nextInt(Orientation.NUM_ORIENTATIONS);
-         moxen.add(i, new NestingMox(i, x, y, o, nestCells,
-                                     NUM_NEIGHBORHOODS,
-                                     NEIGHBORHOOD_INITIAL_DIMENSION,
-                                     NEIGHBORHOOD_DIMENSION_STRIDE,
-                                     NEIGHBORHOOD_DIMENSION_MULTIPLIER,
-                                     EPOCH_INTERVAL_STRIDE,
-                                     EPOCH_INTERVAL_MULTIPLIER));
-      }
-   }
-
-
    // Set moxen.
    public void setMoxen(ArrayList<NestingMox> moxen)
    {
@@ -230,6 +132,7 @@ public class Nest
    // Reset.
    public void reset()
    {
+      random.setSeed(randomSeed);
       if (nestCells != null)
       {
          nestCells.restore();
@@ -333,7 +236,7 @@ public class Nest
       NestingMox mox;
       for (int i = 0; i < numMoxen; i++)
       {
-         mox = new NestingMox(nestCells);
+         mox = new NestingMox(nestCells, randomSeed);
          mox.load(input);
          moxen.add(i, mox);
       }
@@ -343,6 +246,7 @@ public class Nest
    // Run.
    public void run(int steps)
    {
+      random.setSeed(randomSeed);
       if (steps >= 0)
       {
          stepMoxen();
@@ -377,17 +281,20 @@ public class Nest
    // Step mox.
    void stepMox(int moxIndex)
    {
-      int fx, fy, lx, ly, rx, ry, width, height;
-      int stoneIndex, elevationIndex;
+      int fx, fy, bx, by, lx, ly, rx, ry, width, height;
+      int stoneIndex, forwardGradientIndex, lateralGradientIndex;
 
       int        response;
       NestingMox mox;
 
-      float[] sensors         = new float[NestingMox.NUM_SENSORS];
-      stoneIndex              = NestingMox.STONE_SENSOR_INDEX;
-      elevationIndex          = NestingMox.ELEVATION_SENSOR_INDEX;
-      sensors[stoneIndex]     = 0.0f;
-      sensors[elevationIndex] = 0.0f;
+      float[] sensors      = new float[NestingMox.NUM_SENSORS];
+      stoneIndex           = NestingMox.STONE_AHEAD_SENSOR_INDEX;
+      forwardGradientIndex = NestingMox.FORWARD_GRADIENT_SENSOR_INDEX;
+      lateralGradientIndex = NestingMox.LATERAL_GRADIENT_SENSOR_INDEX;
+      for (int i = 0; i < NestingMox.NUM_SENSORS; i++)
+      {
+         sensors[i] = 0.0f;
+      }
       width  = nestCells.size.width;
       height = nestCells.size.height;
       mox    = moxen.get(moxIndex);
@@ -395,17 +302,15 @@ public class Nest
       // Update landmarks.
       mox.landmarkMap[mox.x][mox.y] = true;
 
-      // Cycle mox.
-      sensors[stoneIndex] = (float)nestCells.cells[mox.x][mox.y][NestCells.STONE_CELL_INDEX];
-      sensors[stoneIndex] = (float)nestCells.cells[mox.x][mox.y][NestCells.ELEVATION_CELL_INDEX];
-      response            = mox.cycle(sensors);
-
-      // Process response.
+      // Initialize sensors.
       switch (mox.direction)
       {
       case Orientation.NORTH:
          fx = mox.x;
          fy = ((mox.y + 1) % height);
+         bx = mox.x;
+         by = mox.y - 1;
+         if (by < 0) { by += height; }
          lx = mox.x - 1;
          if (lx < 0) { lx += width; }
          ly = mox.y;
@@ -416,6 +321,9 @@ public class Nest
       case Orientation.EAST:
          fx = (mox.x + 1) % width;
          fy = mox.y;
+         bx = mox.x - 1;
+         if (bx < 0) { bx += width; }
+         by = mox.y;
          lx = mox.x;
          ly = ((mox.y + 1) % height);
          rx = mox.x;
@@ -427,6 +335,8 @@ public class Nest
          fx = mox.x;
          fy = mox.y - 1;
          if (fy < 0) { fy += height; }
+         bx = mox.x;
+         by = ((mox.y + 1) % height);
          lx = (mox.x + 1) % width;
          ly = mox.y;
          rx = mox.x - 1;
@@ -438,6 +348,8 @@ public class Nest
          fx = mox.x - 1;
          if (fx < 0) { fx += width; }
          fy = mox.y;
+         bx = (mox.x + 1) % width;
+         by = mox.y;
          lx = mox.x;
          ly = mox.y - 1;
          if (ly < 0) { ly += height; }
@@ -446,10 +358,80 @@ public class Nest
          break;
 
       default:
-         fx = fy = lx = ly = rx = ry = -1;
+         fx = fy = bx = by = lx = ly = rx = ry = -1;
          break;
       }
+      sensors[stoneIndex] = (float)nestCells.cells[fx][fy][NestCells.STONE_CELL_INDEX];
+      int f = nestCells.cells[fx][fy][NestCells.ELEVATION_CELL_INDEX];
+      int c = nestCells.cells[mox.x][mox.y][NestCells.ELEVATION_CELL_INDEX];
+      int b = nestCells.cells[bx][by][NestCells.ELEVATION_CELL_INDEX];
+      if (c > f)
+      {
+         if (c > b)
+         {
+            sensors[forwardGradientIndex] = (float)NestingMox.PEAK_GRADIENT;
+         }
+         else
+         {
+            sensors[forwardGradientIndex] = (float)NestingMox.FORWARD_DOWN_GRADIENT;
+         }
+      }
+      else if (c < f)
+      {
+         sensors[forwardGradientIndex] = (float)NestingMox.FORWARD_UP_GRADIENT;
+      }
+      else
+      {
+         if (c > b)
+         {
+            sensors[forwardGradientIndex] = (float)NestingMox.FORWARD_UP_GRADIENT;
+         }
+         else if (c < b)
+         {
+            sensors[forwardGradientIndex] = (float)NestingMox.FORWARD_DOWN_GRADIENT;
+         }
+         else
+         {
+            sensors[forwardGradientIndex] = (float)NestingMox.FLAT_GRADIENT;
+         }
+      }
+      int l = nestCells.cells[lx][ly][NestCells.ELEVATION_CELL_INDEX];
+      int r = nestCells.cells[rx][ry][NestCells.ELEVATION_CELL_INDEX];
+      if (c > r)
+      {
+         if (c > l)
+         {
+            sensors[lateralGradientIndex] = (float)NestingMox.PEAK_GRADIENT;
+         }
+         else
+         {
+            sensors[lateralGradientIndex] = (float)NestingMox.LEFT_UP_GRADIENT;
+         }
+      }
+      else if (c < r)
+      {
+         sensors[lateralGradientIndex] = (float)NestingMox.RIGHT_UP_GRADIENT;
+      }
+      else
+      {
+         if (c > l)
+         {
+            sensors[lateralGradientIndex] = (float)NestingMox.RIGHT_UP_GRADIENT;
+         }
+         else if (c < l)
+         {
+            sensors[lateralGradientIndex] = (float)NestingMox.LEFT_UP_GRADIENT;
+         }
+         else
+         {
+            sensors[lateralGradientIndex] = (float)NestingMox.FLAT_GRADIENT;
+         }
+      }
 
+      // Cycle mox.
+      response = mox.cycle(sensors);
+
+      // Process response.
       if (response == NestingMox.FORWARD)
       {
          mox.x = fx;
@@ -471,9 +453,9 @@ public class Nest
       {
          if (!mox.hasStone)
          {
-            if (nestCells.cells[mox.x][mox.y][NestCells.STONE_CELL_INDEX] == NestCells.STONE_CELL_VALUE)
+            if (nestCells.cells[fx][fy][NestCells.STONE_CELL_INDEX] == NestCells.STONE_CELL_VALUE)
             {
-               nestCells.cells[mox.x][mox.y][NestCells.STONE_CELL_INDEX] = MoxWorx.EMPTY_CELL_VALUE;
+               nestCells.cells[fx][fy][NestCells.STONE_CELL_INDEX] = MoxWorx.EMPTY_CELL_VALUE;
                mox.hasStone = true;
             }
          }
@@ -482,9 +464,9 @@ public class Nest
       {
          if (mox.hasStone)
          {
-            if (nestCells.cells[mox.x][mox.y][NestCells.STONE_CELL_INDEX] != NestCells.STONE_CELL_VALUE)
+            if (nestCells.cells[fx][fy][NestCells.STONE_CELL_INDEX] != NestCells.STONE_CELL_VALUE)
             {
-               nestCells.cells[mox.x][mox.y][NestCells.STONE_CELL_INDEX] = NestCells.STONE_CELL_VALUE;
+               nestCells.cells[fx][fy][NestCells.STONE_CELL_INDEX] = NestCells.STONE_CELL_VALUE;
                mox.hasStone = false;
             }
          }
@@ -556,8 +538,8 @@ public class Nest
       int     width             = -1;
       int     height            = -1;
       int     driver            = NestingMox.DRIVER_TYPE.AUTOPILOT.getValue();
-      int     numMoxen          = -1;
       int     numStones         = -1;
+      int     maxElevation      = -1;
       int     randomSeed        = DEFAULT_RANDOM_SEED;
       String  loadfile          = null;
       String  savefile          = null;
@@ -680,32 +662,6 @@ public class Nest
             }
             continue;
          }
-         if (args[i].equals("-numMoxen"))
-         {
-            i++;
-            if (i >= args.length)
-            {
-               System.err.println("Invalid numMoxen option");
-               System.err.println(Nest.Usage);
-               System.exit(2);
-            }
-            try
-            {
-               numMoxen = Integer.parseInt(args[i]);
-            }
-            catch (NumberFormatException e) {
-               System.err.println("Invalid numMoxen option");
-               System.err.println(Nest.Usage);
-               System.exit(2);
-            }
-            if (numMoxen < 0)
-            {
-               System.err.println("Invalid numMoxen option");
-               System.err.println(Nest.Usage);
-               System.exit(2);
-            }
-            continue;
-         }
          if (args[i].equals("-numStones"))
          {
             i++;
@@ -727,6 +683,32 @@ public class Nest
             if (numStones < 0)
             {
                System.err.println("Invalid numStones option");
+               System.err.println(Nest.Usage);
+               System.exit(2);
+            }
+            continue;
+         }
+         if (args[i].equals("-maxElevation"))
+         {
+            i++;
+            if (i >= args.length)
+            {
+               System.err.println("Invalid maxElevation option");
+               System.err.println(Nest.Usage);
+               System.exit(2);
+            }
+            try
+            {
+               NestCells.MAX_ELEVATION_VALUE = Integer.parseInt(args[i]);
+            }
+            catch (NumberFormatException e) {
+               System.err.println("Invalid maxElevation option");
+               System.err.println(Nest.Usage);
+               System.exit(2);
+            }
+            if (NestCells.MAX_ELEVATION_VALUE < 0)
+            {
+               System.err.println("Invalid maxElevation option");
                System.err.println(Nest.Usage);
                System.exit(2);
             }
@@ -983,12 +965,11 @@ public class Nest
             System.err.println(Nest.Usage);
             System.exit(2);
          }
-         if (numMoxen == -1) { numMoxen = 0; }
          if (numStones == -1) { numStones = 0; }
       }
       else
       {
-         if ((numMoxen != -1) || (numStones != -1) ||
+         if ((maxElevation != -1) || (numStones != -1) ||
              (width != -1) || (height != -1) || gotParm)
          {
             System.err.println(Nest.Usage);
@@ -1006,8 +987,7 @@ public class Nest
       }
 
       // Create world.
-      Nest nest = new Nest();
-      nest.random = new Random(randomSeed);
+      Nest nest = new Nest(randomSeed);
       if (loadfile != null)
       {
          try
@@ -1024,14 +1004,13 @@ public class Nest
       {
          try
          {
-            nest.initCells(width, height, numStones);
-            nest.createMoxen(numMoxen,
-                             NUM_NEIGHBORHOODS,
-                             NEIGHBORHOOD_INITIAL_DIMENSION,
-                             NEIGHBORHOOD_DIMENSION_STRIDE,
-                             NEIGHBORHOOD_DIMENSION_MULTIPLIER,
-                             EPOCH_INTERVAL_STRIDE,
-                             EPOCH_INTERVAL_MULTIPLIER);
+            nest.init(width, height, numStones,
+                      NUM_NEIGHBORHOODS,
+                      NEIGHBORHOOD_INITIAL_DIMENSION,
+                      NEIGHBORHOOD_DIMENSION_STRIDE,
+                      NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                      EPOCH_INTERVAL_STRIDE,
+                      EPOCH_INTERVAL_MULTIPLIER);
          }
          catch (Exception e)
          {
@@ -1041,12 +1020,14 @@ public class Nest
       }
 
       // Create display?
-      SectorDisplay.graduatedColors = new boolean[NestCells.CELL_DIMENSIONS];
-      SectorDisplay.graduatedColors[NestCells.STONE_CELL_INDEX]     = false;
-      SectorDisplay.graduatedColors[NestCells.ELEVATION_CELL_INDEX] = true;
-      SectorDisplay.graduatedColorMaximums = new int[NestCells.CELL_DIMENSIONS];
-      SectorDisplay.graduatedColorMaximums[NestCells.ELEVATION_CELL_INDEX] =
-         NestCells.NUM_ELEVATION_VALUES - 1;
+      SectorDisplay.graduatedColors = new boolean[NestingMox.NUM_SENSORS];
+      SectorDisplay.graduatedColors[NestingMox.STONE_AHEAD_SENSOR_INDEX]      = false;
+      SectorDisplay.graduatedColors[NestingMox.FORWARD_GRADIENT_SENSOR_INDEX] = true;
+      SectorDisplay.graduatedColors[NestingMox.LATERAL_GRADIENT_SENSOR_INDEX] = true;
+      SectorDisplay.graduatedColors[NestingMox.CARRIED_STONE_SENSOR_INDEX]    = false;
+      SectorDisplay.graduatedColorMaximums = new int[NestingMox.NUM_SENSORS];
+      SectorDisplay.graduatedColorMaximums[NestingMox.FORWARD_GRADIENT_SENSOR_INDEX] = NestCells.MAX_ELEVATION_VALUE;
+      SectorDisplay.graduatedColorMaximums[NestingMox.LATERAL_GRADIENT_SENSOR_INDEX] = NestCells.MAX_ELEVATION_VALUE;
       if (display)
       {
          nest.createDisplay();
