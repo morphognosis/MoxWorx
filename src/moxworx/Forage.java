@@ -4,10 +4,16 @@
 
 package moxworx;
 
-import java.util.*;
-import java.io.*;
-import java.awt.*;
-import javax.swing.*;
+import java.awt.Dimension;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Random;
+import javax.swing.UIManager;
 
 public class Forage
 {

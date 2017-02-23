@@ -5,7 +5,7 @@
 package moxworx;
 
 import java.io.*;
-import java.util.Random;
+import java.security.SecureRandom;
 import java.awt.*;
 
 public class NestCells
@@ -49,7 +49,8 @@ public class NestCells
       }
 
       // Set elevations.
-      Random random = new Random(randomSeed);
+      SecureRandom random = new SecureRandom();
+      random.setSeed(randomSeed);
       nestX = random.nextInt(width - 2) + 1;
       nestY = random.nextInt(height - 2) + 1;
       cells[nestX][nestY][NestCells.ELEVATION_CELL_INDEX] = NestCells.MAX_ELEVATION_VALUE;

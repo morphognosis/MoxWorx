@@ -5,8 +5,8 @@
 package moxworx;
 
 import java.io.*;
+import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.Random;
 import java.util.Vector;
 import weka.classifiers.Evaluation;
 import weka.classifiers.functions.MultilayerPerceptron;
@@ -21,17 +21,17 @@ import weka.core.converters.ArffSaver;
 public class NestingMox
 {
    // Properties.
-   public int       id;
-   public int       x, y;
-   public int       direction;
-   public boolean   hasStone;
-   public NestCells nestCells;
-   public int       x2, y2;
-   public int       direction2;
-   public int       driver;
-   public int       driverResponse;
-   public int       randomSeed;
-   public Random    random;
+   public int          id;
+   public int          x, y;
+   public int          direction;
+   public boolean      hasStone;
+   public NestCells    nestCells;
+   public int          x2, y2;
+   public int          direction2;
+   public int          driver;
+   public int          driverResponse;
+   public int          randomSeed;
+   public SecureRandom random;
 
    // Current morphognostic.
    public Morphognostic morphognostic;
@@ -127,7 +127,8 @@ public class NestingMox
       this.id         = id;
       this.nestCells  = nestCells;
       this.randomSeed = randomSeed;
-      random          = new Random(randomSeed);
+      random          = new SecureRandom();
+      random.setSeed(randomSeed);
       init(x, y, direction);
       int [] numEventTypes = new int[NUM_SENSORS];
       numEventTypes[STONE_AHEAD_SENSOR_INDEX]      = NestCells.NUM_STONE_VALUES;
@@ -153,7 +154,8 @@ public class NestingMox
       this.id         = id;
       this.nestCells  = nestCells;
       this.randomSeed = randomSeed;
-      random          = new Random(randomSeed);
+      random          = new SecureRandom();
+      random.setSeed(randomSeed);
       init(x, y, direction);
       int [] numEventTypes = new int[NUM_SENSORS];
       numEventTypes[STONE_AHEAD_SENSOR_INDEX]      = NestCells.NUM_STONE_VALUES;
@@ -179,7 +181,8 @@ public class NestingMox
       id              = -1;
       this.nestCells  = nestCells;
       this.randomSeed = randomSeed;
-      random          = new Random(randomSeed);
+      random          = new SecureRandom();
+      random.setSeed(randomSeed);
       init();
       int [] numEventTypes = new int[NUM_SENSORS];
       numEventTypes[STONE_AHEAD_SENSOR_INDEX]      = NestCells.NUM_STONE_VALUES;

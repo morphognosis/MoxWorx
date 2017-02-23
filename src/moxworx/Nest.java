@@ -4,10 +4,16 @@
 
 package moxworx;
 
-import java.util.*;
-import java.io.*;
-import java.awt.*;
-import javax.swing.*;
+import java.awt.Dimension;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import javax.swing.UIManager;
 
 public class Nest
 {
@@ -54,14 +60,15 @@ public class Nest
    NestDisplay display;
 
    // Random numbers.
-   int    randomSeed;
-   Random random;
+   int          randomSeed;
+   SecureRandom random;
 
    // Constructor.
    public Nest(int randomSeed)
    {
       this.randomSeed = randomSeed;
-      random          = new Random(randomSeed);
+      random          = new SecureRandom();
+      random.setSeed(randomSeed);
    }
 
 
