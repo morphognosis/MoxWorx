@@ -9,6 +9,9 @@ import java.io.*;
 import java.awt.*;
 import javax.swing.*;
 
+import morphognosis.Morphognostic;
+import morphognosis.Orientation;
+
 public class Pong
 {
    // Usage.

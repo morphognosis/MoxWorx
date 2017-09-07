@@ -1,6 +1,6 @@
 // For conditions of distribution and use, see copyright notice in MoxWorx.java
 
-// Nesting mox: mophognosis organism.
+// Nesting mox: morphognosis organism.
 
 package moxworx;
 
@@ -8,6 +8,11 @@ import java.io.*;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Vector;
+
+import morphognosis.Metamorph;
+import morphognosis.Morphognostic;
+import morphognosis.Orientation;
+import morphognosis.Utility;
 import weka.classifiers.Evaluation;
 import weka.classifiers.functions.MultilayerPerceptron;
 import weka.core.Attribute;

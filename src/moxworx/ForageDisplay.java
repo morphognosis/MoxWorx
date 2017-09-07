@@ -11,6 +11,9 @@ import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.event.*;
 
+import morphognosis.Orientation;
+import morphognosis.SectorDisplay;
+
 public class ForageDisplay extends JFrame
 {
    private static final long serialVersionUID = 0L;

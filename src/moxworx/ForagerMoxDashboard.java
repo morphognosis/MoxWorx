@@ -8,6 +8,8 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 
+import morphognosis.MorphognosticDisplay;
+
 public class ForagerMoxDashboard extends JFrame
 {
    private static final long serialVersionUID = 0L;

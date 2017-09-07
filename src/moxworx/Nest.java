@@ -15,6 +15,11 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import javax.swing.UIManager;
 
+import morphognosis.Morphognostic;
+import morphognosis.Orientation;
+import morphognosis.SectorDisplay;
+import morphognosis.Utility;
+
 public class Nest
 {
    // Usage.
@@ -22,7 +27,7 @@ public class Nest
       "Usage:\n" +
       "  New run:\n" +
       "    java moxworx.Nest\n" +
-      "      -steps <steps> (stops when food consumed) | -display\n" +
+      "      -steps <steps> | -display\n" +
       "      -dimensions <width> <height>\n" +
       "     [-driver <metamorphDB | metamorphNN | autopilot> (mox driver: default=autopilot)]\n" +
       "     [-numStones <quantity> (default=0)]\n" +
@@ -37,7 +42,7 @@ public class Nest
       "     [-save <file name>]\n" +
       "  Resume run:\n" +
       "    java moxworx.Nest\n" +
-      "      -steps <steps> (stops when food consumed) | -display\n" +
+      "      -steps <steps> | -display\n" +
       "      -load <file name>\n" +
       "     [-driver <metamorphDB | metamorphNN | autopilot> (default=autopilot)]\n" +
       "     [-randomSeed <random number seed>]\n" +

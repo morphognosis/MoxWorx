@@ -8,6 +8,11 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Vector;
+
+import morphognosis.Metamorph;
+import morphognosis.Morphognostic;
+import morphognosis.Orientation;
+import morphognosis.Utility;
 import weka.classifiers.Evaluation;
 import weka.classifiers.functions.MultilayerPerceptron;
 import weka.core.Attribute;

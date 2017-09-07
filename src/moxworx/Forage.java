@@ -15,6 +15,10 @@ import java.util.ArrayList;
 import java.util.Random;
 import javax.swing.UIManager;
 
+import morphognosis.Morphognostic;
+import morphognosis.Orientation;
+import morphognosis.Utility;
+
 public class Forage
 {
    // Usage.

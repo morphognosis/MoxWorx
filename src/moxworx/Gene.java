@@ -5,6 +5,9 @@
 package moxworx;
 
 import java.util.*;
+
+import morphognosis.Utility;
+
 import java.io.*;
 
 public class Gene
