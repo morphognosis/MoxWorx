@@ -203,6 +203,8 @@ public class ForageDisplay extends JFrame
    // Step.
    void step()
    {
+      setStepDelay(MAX_STEP_DELAY);
+      controls.speedSlider.setValue(MAX_STEP_DELAY);
       timer = 0;
    }
 
@@ -609,7 +611,6 @@ public class ForageDisplay extends JFrame
          // Step?
          if (evt.getSource() == (Object)stepButton)
          {
-            speedSlider.setValue(MAX_STEP_DELAY);
             step();
 
             return;
