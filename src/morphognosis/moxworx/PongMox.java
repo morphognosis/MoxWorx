@@ -2,7 +2,7 @@
 
 // Pong playing mox: mophognosis organism.
 
-package moxworx;
+package morphognosis.moxworx;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -240,7 +240,7 @@ public class PongMox
    // Save mox.
    public void save(FileOutputStream output) throws IOException
    {
-      PrintWriter writer = new PrintWriter(new OutputStreamWriter(output));
+      DataOutputStream writer = new DataOutputStream(new BufferedOutputStream(output));
 
       Utility.saveInt(writer, id);
       Utility.saveInt(writer, x);
@@ -250,12 +250,12 @@ public class PongMox
       Utility.saveInt(writer, x2);
       Utility.saveInt(writer, y2);
       Utility.saveInt(writer, direction2);
-      morphognostic.save(output);
+      morphognostic.save(writer);
       Utility.saveInt(writer, maxLandmarkEventAge);
       Utility.saveInt(writer, metamorphs.size());
       for (Metamorph m : metamorphs)
       {
-         m.save(output);
+         m.save(writer);
       }
       writer.flush();
    }
@@ -294,13 +294,13 @@ public class PongMox
       x2                  = Utility.loadInt(reader);
       y2                  = Utility.loadInt(reader);
       direction2          = Utility.loadInt(reader);
-      morphognostic       = Morphognostic.load(input);
+      morphognostic       = Morphognostic.load(reader);
       maxLandmarkEventAge = Utility.loadInt(reader);
       metamorphs.clear();
       int n = Utility.loadInt(reader);
       for (int i = 0; i < n; i++)
       {
-         metamorphs.add(Metamorph.load(input));
+         metamorphs.add(Metamorph.load(reader));
       }
       initMetamorphNN();
    }

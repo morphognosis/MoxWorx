@@ -2,7 +2,7 @@
  * Gene.
  */
 
-package moxworx;
+package morphognosis.moxworx;
 
 import java.util.*;
 
@@ -241,7 +241,7 @@ public class Gene
 
 
    // Save value.
-   void saveValue(PrintWriter writer) throws IOException
+   void saveValue(DataOutputStream writer) throws IOException
    {
       switch (type)
       {

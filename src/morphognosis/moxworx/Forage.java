@@ -1,37 +1,39 @@
 // For conditions of distribution and use, see copyright notice in MoxWorx.java
 
-// Nest building task.
+// Forage task.
 
-package moxworx;
+package morphognosis.moxworx;
 
 import java.awt.Dimension;
+import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Random;
 import javax.swing.UIManager;
 
 import morphognosis.Morphognostic;
 import morphognosis.Orientation;
-import morphognosis.SectorDisplay;
 import morphognosis.Utility;
 
-public class Nest
+public class Forage
 {
    // Usage.
    public static final String Usage =
       "Usage:\n" +
       "  New run:\n" +
-      "    java moxworx.Nest\n" +
-      "      -steps <steps> | -display\n" +
+      "    java moxworx.Forage\n" +
+      "      -steps <steps> (stops when food consumed) | -display\n" +
       "      -dimensions <width> <height>\n" +
       "     [-driver <metamorphDB | metamorphNN | autopilot> (mox driver: default=autopilot)]\n" +
-      "     [-numStones <quantity> (default=0)]\n" +
-      "     [-maxElevation <quantity> (default=" + NestCells.MAX_ELEVATION_VALUE + ")]\n" +
+      "     [-numMoxen <quantity> (default=0)]\n" +
+      "     [-numLandmarkTypes <quantity> (default=1)]\n" +
+      "     [-numLandmarks <quantity> (default=0)]\n" +
+      "     [-numFoods <quantity> (default=0)]\n" +
       "     [-numNeighborhoods <quantity> (default=" + Morphognostic.DEFAULT_NUM_NEIGHBORHOODS + ")]\n" +
       "     [-neighborhoodInitialDimension <quantity> (default=" + Morphognostic.DEFAULT_NEIGHBORHOOD_INITIAL_DIMENSION + ")]\n" +
       "     [-neighborhoodDimensionStride <quantity> (default=" + Morphognostic.DEFAULT_NEIGHBORHOOD_DIMENSION_STRIDE + ")]\n" +
@@ -41,8 +43,8 @@ public class Nest
       "     [-randomSeed <random number seed>]\n" +
       "     [-save <file name>]\n" +
       "  Resume run:\n" +
-      "    java moxworx.Nest\n" +
-      "      -steps <steps> | -display\n" +
+      "    java moxworx.Forage\n" +
+      "      -steps <steps> (stops when food consumed) | -display\n" +
       "      -load <file name>\n" +
       "     [-driver <metamorphDB | metamorphNN | autopilot> (default=autopilot)]\n" +
       "     [-randomSeed <random number seed>]\n" +
@@ -55,59 +57,89 @@ public class Nest
    // Default random seed.
    public static final int DEFAULT_RANDOM_SEED = 4517;
 
+   // Number of landmark types.
+   int numLandmarkTypes;
+
    // Moxen.
-   ArrayList<NestingMox> moxen;
+   ArrayList<ForagerMox> moxen;
 
    // Cells.
-   NestCells nestCells;
+   ForageCells forageCells;
 
    // Display.
-   NestDisplay display;
+   ForageDisplay display;
 
    // Random numbers.
-   int          randomSeed;
-   SecureRandom random;
+   Random random;
 
    // Constructor.
-   public Nest(int randomSeed)
+   public Forage()
    {
-      this.randomSeed = randomSeed;
-      random          = new SecureRandom();
-      random.setSeed(randomSeed);
    }
 
 
-   // Initialize.
-   public void init(int width, int height, int numStones,
-                    int NUM_NEIGHBORHOODS,
-                    int NEIGHBORHOOD_INITIAL_DIMENSION,
-                    int NEIGHBORHOOD_DIMENSION_STRIDE,
-                    int NEIGHBORHOOD_DIMENSION_MULTIPLIER,
-                    int EPOCH_INTERVAL_STRIDE,
-                    int EPOCH_INTERVAL_MULTIPLIER)
+   // Initialize cells.
+   public void initCells(int width, int height, int numLandmarkTypes, int numLandmarks, int numFoods)
    {
-      // Create cells.
-      nestCells = new NestCells(new Dimension(width, height), numStones, randomSeed);
+      int i, j, n, x, y;
 
-      // Create mox.
-      moxen = new ArrayList<NestingMox>();
-      moxen.add(0, new NestingMox(0, nestCells.nestX, nestCells.nestY,
-                                  Orientation.NORTH, nestCells, randomSeed,
-                                  NUM_NEIGHBORHOODS,
-                                  NEIGHBORHOOD_INITIAL_DIMENSION,
-                                  NEIGHBORHOOD_DIMENSION_STRIDE,
-                                  NEIGHBORHOOD_DIMENSION_MULTIPLIER,
-                                  EPOCH_INTERVAL_STRIDE,
-                                  EPOCH_INTERVAL_MULTIPLIER));
+      this.numLandmarkTypes = numLandmarkTypes;
+
+      // Create cells.
+      forageCells = new ForageCells(new Dimension(width, height));
+      for (x = 0; x < width; x++)
+      {
+         for (y = 0; y < height; y++)
+         {
+            forageCells.cells[x][y] = forageCells.restoreCells[x][y] = MoxWorx.EMPTY_CELL_VALUE;
+         }
+      }
+
+      // Create landmarks.
+      n = 10;
+      for (i = 0; i < numLandmarks; i++)
+      {
+         for (j = 0; j < n; j++)
+         {
+            x = random.nextInt(width);
+            y = random.nextInt(height);
+            if (forageCells.cells[x][y] == MoxWorx.EMPTY_CELL_VALUE)
+            {
+               int k = 0;
+               if (numLandmarkTypes > 1)
+               {
+                  k = random.nextInt(numLandmarkTypes);
+               }
+               forageCells.cells[x][y] = forageCells.restoreCells[x][y] = ForageCells.LANDMARK_CELLS_BEGIN_VALUE + k;
+               break;
+            }
+         }
+      }
+
+      // Create foods.
+      for (i = 0; i < numFoods; i++)
+      {
+         for (j = 0; j < n; j++)
+         {
+            x = random.nextInt(width);
+            y = random.nextInt(height);
+            if (forageCells.cells[x][y] == MoxWorx.EMPTY_CELL_VALUE)
+            {
+               forageCells.cells[x][y] = forageCells.restoreCells[x][y] = ForageCells.FOOD_CELL_VALUE;
+               break;
+            }
+         }
+      }
+      forageCells.checkpoint();
    }
 
 
    // Get width.
    int getWidth()
    {
-      if (nestCells != null)
+      if (forageCells != null)
       {
-         return(nestCells.size.width);
+         return(forageCells.size.width);
       }
       else
       {
@@ -119,9 +151,9 @@ public class Nest
    // Get height.
    int getHeight()
    {
-      if (nestCells != null)
+      if (forageCells != null)
       {
-         return(nestCells.size.height);
+         return(forageCells.size.height);
       }
       else
       {
@@ -130,8 +162,49 @@ public class Nest
    }
 
 
+   // Create moxen.
+   public void createMoxen(int numMoxen, int numLandmarkTypes,
+                           int NUM_NEIGHBORHOODS,
+                           int NEIGHBORHOOD_INITIAL_DIMENSION,
+                           int NEIGHBORHOOD_DIMENSION_STRIDE,
+                           int NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                           int EPOCH_INTERVAL_STRIDE,
+                           int EPOCH_INTERVAL_MULTIPLIER)
+   {
+      int i, j, n, x, y, w, h;
+
+      // Create moxen.
+      w     = forageCells.size.width;
+      h     = forageCells.size.height;
+      moxen = new ArrayList<ForagerMox>(numMoxen);
+      n     = 10;
+      for (i = 0; i < numMoxen; i++)
+      {
+         for (j = 0; j < n; j++)
+         {
+            x = random.nextInt(w);
+            y = random.nextInt(h);
+            if (forageCells.cells[x][y] == MoxWorx.EMPTY_CELL_VALUE)
+            {
+               int o = Orientation.NORTH;
+               o = random.nextInt(Orientation.NUM_ORIENTATIONS);
+               moxen.add(i, new ForagerMox(i, x, y, o, numLandmarkTypes, forageCells,
+                                           NUM_NEIGHBORHOODS,
+                                           NEIGHBORHOOD_INITIAL_DIMENSION,
+                                           NEIGHBORHOOD_DIMENSION_STRIDE,
+                                           NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                                           EPOCH_INTERVAL_STRIDE,
+                                           EPOCH_INTERVAL_MULTIPLIER));
+               forageCells.cells[x][y] = forageCells.restoreCells[x][y] = ForageCells.MOX_CELL_VALUE;
+               break;
+            }
+         }
+      }
+   }
+
+
    // Set moxen.
-   public void setMoxen(ArrayList<NestingMox> moxen)
+   public void setMoxen(ArrayList<ForagerMox> moxen)
    {
       this.moxen = moxen;
       if (display != null)
@@ -144,10 +217,9 @@ public class Nest
    // Reset.
    public void reset()
    {
-      random.setSeed(randomSeed);
-      if (nestCells != null)
+      if (forageCells != null)
       {
-         nestCells.restore();
+         forageCells.restore();
       }
       if (moxen != null)
       {
@@ -172,8 +244,8 @@ public class Nest
          display.close();
          display = null;
       }
-      nestCells = null;
-      moxen     = null;
+      forageCells = null;
+      moxen       = null;
    }
 
 
@@ -198,16 +270,19 @@ public class Nest
    // Save.
    public void save(FileOutputStream output) throws IOException
    {
-      PrintWriter writer = new PrintWriter(output);
+      DataOutputStream writer = new DataOutputStream(new BufferedOutputStream(output));
+
+      // Save landmark types.
+      Utility.saveInt(writer, numLandmarkTypes);
 
       // Save cells.
-      nestCells.save(output);
+      forageCells.save(output);
 
       // Save moxen.
       int numMoxen = moxen.size();
       Utility.saveInt(writer, numMoxen);
       writer.flush();
-      NestingMox mox;
+      ForagerMox mox;
       for (int i = 0; i < numMoxen; i++)
       {
          mox = moxen.get(i);
@@ -238,17 +313,20 @@ public class Nest
    {
       DataInputStream reader = new DataInputStream(input);
 
+      // Load landmark types.
+      numLandmarkTypes = Utility.loadInt(reader);
+
       // Load cells.
-      nestCells = new NestCells();
-      nestCells.load(input);
+      forageCells = new ForageCells();
+      forageCells.load(input);
 
       // Load moxen.
       int numMoxen = Utility.loadInt(reader);
-      moxen = new ArrayList<NestingMox>(numMoxen);
-      NestingMox mox;
+      moxen = new ArrayList<ForagerMox>(numMoxen);
+      ForagerMox mox;
       for (int i = 0; i < numMoxen; i++)
       {
-         mox = new NestingMox(nestCells, randomSeed);
+         mox = new ForagerMox(forageCells);
          mox.load(input);
          moxen.add(i, mox);
       }
@@ -256,20 +334,28 @@ public class Nest
 
 
    // Run.
-   public void run(int steps)
+   // Return count of remaining food.
+   public int run(int steps)
    {
-      random.setSeed(randomSeed);
       if (steps >= 0)
       {
-         stepMoxen();
-      }
-      else
-      {
-         for (int i = 0; updateDisplay(i); i++)
+         for (int i = 0; i < steps && forageCells.countFood() > 0; i++)
          {
             stepMoxen();
          }
       }
+      else
+      {
+         for (int i = 0; updateDisplay(i); )
+         {
+            if (forageCells.countFood() > 0)
+            {
+               stepMoxen();
+               i++;
+            }
+         }
+      }
+      return(forageCells.countFood());
    }
 
 
@@ -293,36 +379,27 @@ public class Nest
    // Step mox.
    void stepMox(int moxIndex)
    {
-      int fx, fy, bx, by, lx, ly, rx, ry, width, height;
-      int stoneIndex, forwardGradientIndex, lateralGradientIndex;
+      int fx, fy, lx, ly, rx, ry, width, height;
+      int landmarkIndex, foodIndex;
 
       int        response;
-      NestingMox mox;
+      ForagerMox mox;
 
-      float[] sensors      = new float[NestingMox.NUM_SENSORS];
-      stoneIndex           = NestingMox.STONE_AHEAD_SENSOR_INDEX;
-      forwardGradientIndex = NestingMox.FORWARD_GRADIENT_SENSOR_INDEX;
-      lateralGradientIndex = NestingMox.LATERAL_GRADIENT_SENSOR_INDEX;
-      for (int i = 0; i < NestingMox.NUM_SENSORS; i++)
-      {
-         sensors[i] = 0.0f;
-      }
-      width  = nestCells.size.width;
-      height = nestCells.size.height;
+      float[] sensors        = new float[ForagerMox.NUM_SENSORS];
+      landmarkIndex          = ForagerMoxDashboard.LANDMARK_SENSOR_INDEX;
+      foodIndex              = ForagerMoxDashboard.FOOD_SENSOR_INDEX;
+      sensors[landmarkIndex] = 0.0f;
+      sensors[foodIndex]     = 0.0f;
+      width  = forageCells.size.width;
+      height = forageCells.size.height;
       mox    = moxen.get(moxIndex);
 
-      // Update landmarks.
-      mox.landmarkMap[mox.x][mox.y] = true;
-
-      // Initialize sensors.
+      // Detect object ahead.
       switch (mox.direction)
       {
       case Orientation.NORTH:
          fx = mox.x;
          fy = ((mox.y + 1) % height);
-         bx = mox.x;
-         by = mox.y - 1;
-         if (by < 0) { by += height; }
          lx = mox.x - 1;
          if (lx < 0) { lx += width; }
          ly = mox.y;
@@ -333,9 +410,6 @@ public class Nest
       case Orientation.EAST:
          fx = (mox.x + 1) % width;
          fy = mox.y;
-         bx = mox.x - 1;
-         if (bx < 0) { bx += width; }
-         by = mox.y;
          lx = mox.x;
          ly = ((mox.y + 1) % height);
          rx = mox.x;
@@ -347,8 +421,6 @@ public class Nest
          fx = mox.x;
          fy = mox.y - 1;
          if (fy < 0) { fy += height; }
-         bx = mox.x;
-         by = ((mox.y + 1) % height);
          lx = (mox.x + 1) % width;
          ly = mox.y;
          rx = mox.x - 1;
@@ -360,8 +432,6 @@ public class Nest
          fx = mox.x - 1;
          if (fx < 0) { fx += width; }
          fy = mox.y;
-         bx = (mox.x + 1) % width;
-         by = mox.y;
          lx = mox.x;
          ly = mox.y - 1;
          if (ly < 0) { ly += height; }
@@ -370,90 +440,40 @@ public class Nest
          break;
 
       default:
-         fx = fy = bx = by = lx = ly = rx = ry = -1;
+         fx = fy = lx = ly = rx = ry = -1;
          break;
       }
-      sensors[stoneIndex] = (float)nestCells.cells[fx][fy][NestCells.STONE_CELL_INDEX];
-      int f = nestCells.cells[fx][fy][NestCells.ELEVATION_CELL_INDEX];
-      int c = nestCells.cells[mox.x][mox.y][NestCells.ELEVATION_CELL_INDEX];
-      int b = nestCells.cells[bx][by][NestCells.ELEVATION_CELL_INDEX];
-      if (c > f)
+      if (forageCells.cells[fx][fy] != MoxWorx.EMPTY_CELL_VALUE)
       {
-         if (c > b)
-         {
-            sensors[forwardGradientIndex] = (float)NestingMox.PEAK_GRADIENT;
-         }
-         else
-         {
-            sensors[forwardGradientIndex] = (float)NestingMox.FORWARD_DOWN_GRADIENT;
-         }
+         sensors[landmarkIndex] = 1.0f;
       }
-      else if (c < f)
+      if (forageCells.cells[fx][fy] >= ForageCells.LANDMARK_CELLS_BEGIN_VALUE)
       {
-         sensors[forwardGradientIndex] = (float)NestingMox.FORWARD_UP_GRADIENT;
+         mox.landmarkMap[fx][fy] = true;
       }
-      else
-      {
-         if (c > b)
-         {
-            sensors[forwardGradientIndex] = (float)NestingMox.FORWARD_UP_GRADIENT;
-         }
-         else if (c < b)
-         {
-            sensors[forwardGradientIndex] = (float)NestingMox.FORWARD_DOWN_GRADIENT;
-         }
-         else
-         {
-            sensors[forwardGradientIndex] = (float)NestingMox.FLAT_GRADIENT;
-         }
-      }
-      int l = nestCells.cells[lx][ly][NestCells.ELEVATION_CELL_INDEX];
-      int r = nestCells.cells[rx][ry][NestCells.ELEVATION_CELL_INDEX];
-      if (c > r)
-      {
-         if (c > l)
-         {
-            sensors[lateralGradientIndex] = (float)NestingMox.PEAK_GRADIENT;
-         }
-         else
-         {
-            sensors[lateralGradientIndex] = (float)NestingMox.LEFT_UP_GRADIENT;
-         }
-      }
-      else if (c < r)
-      {
-         sensors[lateralGradientIndex] = (float)NestingMox.RIGHT_UP_GRADIENT;
-      }
-      else
-      {
-         if (c > l)
-         {
-            sensors[lateralGradientIndex] = (float)NestingMox.RIGHT_UP_GRADIENT;
-         }
-         else if (c < l)
-         {
-            sensors[lateralGradientIndex] = (float)NestingMox.LEFT_UP_GRADIENT;
-         }
-         else
-         {
-            sensors[lateralGradientIndex] = (float)NestingMox.FLAT_GRADIENT;
-         }
-      }
+
+      // Detect food.
+      sensors[foodIndex] = 1.0f / ((float)forageCells.foodDist(fx, fy) + 1.0f);
 
       // Cycle mox.
-      response = mox.cycle(sensors);
+      response = mox.cycle(sensors, fx, fy);
 
       // Process response.
-      if (response == NestingMox.FORWARD)
+      if (response == ForagerMox.FORWARD)
       {
-         mox.x = fx;
-         mox.y = fy;
+         if (forageCells.cells[fx][fy] == MoxWorx.EMPTY_CELL_VALUE)
+         {
+            forageCells.cells[mox.x][mox.y] = MoxWorx.EMPTY_CELL_VALUE;
+            mox.x = fx;
+            mox.y = fy;
+            forageCells.cells[mox.x][mox.y] = ForageCells.MOX_CELL_VALUE;
+         }
       }
-      else if (response == NestingMox.RIGHT)
+      else if (response == ForagerMox.RIGHT)
       {
          mox.direction = (mox.direction + 1) % Orientation.NUM_ORIENTATIONS;
       }
-      else if (response == NestingMox.LEFT)
+      else if (response == ForagerMox.LEFT)
       {
          mox.direction = mox.direction - 1;
          if (mox.direction < 0)
@@ -461,26 +481,11 @@ public class Nest
             mox.direction = mox.direction + Orientation.NUM_ORIENTATIONS;
          }
       }
-      else if (response == NestingMox.TAKE_STONE)
+      else if (response == ForagerMox.EAT)
       {
-         if (!mox.hasStone)
+         if (forageCells.cells[fx][fy] == ForageCells.FOOD_CELL_VALUE)
          {
-            if (nestCells.cells[fx][fy][NestCells.STONE_CELL_INDEX] == NestCells.STONE_CELL_VALUE)
-            {
-               nestCells.cells[fx][fy][NestCells.STONE_CELL_INDEX] = MoxWorx.EMPTY_CELL_VALUE;
-               mox.hasStone = true;
-            }
-         }
-      }
-      else if (response == NestingMox.DROP_STONE)
-      {
-         if (mox.hasStone)
-         {
-            if (nestCells.cells[fx][fy][NestCells.STONE_CELL_INDEX] != NestCells.STONE_CELL_VALUE)
-            {
-               nestCells.cells[fx][fy][NestCells.STONE_CELL_INDEX] = NestCells.STONE_CELL_VALUE;
-               mox.hasStone = false;
-            }
+            forageCells.cells[fx][fy] = MoxWorx.EMPTY_CELL_VALUE;
          }
       }
    }
@@ -493,11 +498,11 @@ public class Nest
       {
          if (moxen == null)
          {
-            display = new NestDisplay(nestCells);
+            display = new ForageDisplay(forageCells, numLandmarkTypes);
          }
          else
          {
-            display = new NestDisplay(nestCells, moxen);
+            display = new ForageDisplay(forageCells, numLandmarkTypes, moxen);
          }
       }
    }
@@ -549,9 +554,11 @@ public class Nest
       int     steps             = -1;
       int     width             = -1;
       int     height            = -1;
-      int     driver            = NestingMox.DRIVER_TYPE.AUTOPILOT.getValue();
-      int     numStones         = -1;
-      int     maxElevation      = -1;
+      int     driver            = ForagerMox.DRIVER_TYPE.AUTOPILOT.getValue();
+      int     numMoxen          = -1;
+      int     numLandmarkTypes  = -1;
+      int     numLandmarks      = -1;
+      int     numFoods          = -1;
       int     randomSeed        = DEFAULT_RANDOM_SEED;
       String  loadfile          = null;
       String  savefile          = null;
@@ -572,7 +579,7 @@ public class Nest
             if (i >= args.length)
             {
                System.err.println("Invalid steps option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             try
@@ -581,13 +588,13 @@ public class Nest
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid steps option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             if (steps < 0)
             {
                System.err.println("Invalid steps option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             continue;
@@ -603,7 +610,7 @@ public class Nest
             if (i >= args.length)
             {
                System.err.println("Invalid dimensions option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             try
@@ -612,20 +619,20 @@ public class Nest
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid width option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             if (width < 2)
             {
                System.err.println("Invalid width option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             i++;
             if (i >= args.length)
             {
                System.err.println("Invalid dimensions option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             try
@@ -634,13 +641,13 @@ public class Nest
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid height option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             if (height < 2)
             {
                System.err.println("Invalid height option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             continue;
@@ -651,77 +658,129 @@ public class Nest
             if (i >= args.length)
             {
                System.err.println("Invalid driver option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             if (args[i].equals("metamorphDB"))
             {
-               driver = NestingMox.DRIVER_TYPE.METAMORPH_DB.getValue();
+               driver = ForagerMox.DRIVER_TYPE.METAMORPH_DB.getValue();
             }
             else if (args[i].equals("metamorphNN"))
             {
-               driver = NestingMox.DRIVER_TYPE.METAMORPH_NN.getValue();
+               driver = ForagerMox.DRIVER_TYPE.METAMORPH_NN.getValue();
             }
             else if (args[i].equals("autopilot"))
             {
-               driver = NestingMox.DRIVER_TYPE.AUTOPILOT.getValue();
+               driver = ForagerMox.DRIVER_TYPE.AUTOPILOT.getValue();
             }
             else
             {
                System.err.println("Invalid driver option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             continue;
          }
-         if (args[i].equals("-numStones"))
+         if (args[i].equals("-numMoxen"))
          {
             i++;
             if (i >= args.length)
             {
-               System.err.println("Invalid numStones option");
-               System.err.println(Nest.Usage);
+               System.err.println("Invalid numMoxen option");
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             try
             {
-               numStones = Integer.parseInt(args[i]);
+               numMoxen = Integer.parseInt(args[i]);
             }
             catch (NumberFormatException e) {
-               System.err.println("Invalid numStones option");
-               System.err.println(Nest.Usage);
+               System.err.println("Invalid numMoxen option");
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
-            if (numStones < 0)
+            if (numMoxen < 0)
             {
-               System.err.println("Invalid numStones option");
-               System.err.println(Nest.Usage);
+               System.err.println("Invalid numMoxen option");
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             continue;
          }
-         if (args[i].equals("-maxElevation"))
+         if (args[i].equals("-numLandmarkTypes"))
          {
             i++;
             if (i >= args.length)
             {
-               System.err.println("Invalid maxElevation option");
-               System.err.println(Nest.Usage);
+               System.err.println("Invalid numLandmarkTypes option");
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             try
             {
-               NestCells.MAX_ELEVATION_VALUE = Integer.parseInt(args[i]);
+               numLandmarkTypes = Integer.parseInt(args[i]);
             }
             catch (NumberFormatException e) {
-               System.err.println("Invalid maxElevation option");
-               System.err.println(Nest.Usage);
+               System.err.println("Invalid numLandmarkTypes option");
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
-            if (NestCells.MAX_ELEVATION_VALUE < 0)
+            if (numLandmarkTypes < 1)
             {
-               System.err.println("Invalid maxElevation option");
-               System.err.println(Nest.Usage);
+               System.err.println("Invalid numLandmarkTypes option");
+               System.err.println(Forage.Usage);
+               System.exit(2);
+            }
+            continue;
+         }
+         if (args[i].equals("-numLandmarks"))
+         {
+            i++;
+            if (i >= args.length)
+            {
+               System.err.println("Invalid numLandmarks option");
+               System.err.println(Forage.Usage);
+               System.exit(2);
+            }
+            try
+            {
+               numLandmarks = Integer.parseInt(args[i]);
+            }
+            catch (NumberFormatException e) {
+               System.err.println("Invalid numLandmarks option");
+               System.err.println(Forage.Usage);
+               System.exit(2);
+            }
+            if (numLandmarks < 0)
+            {
+               System.err.println("Invalid numLandmarks option");
+               System.err.println(Forage.Usage);
+               System.exit(2);
+            }
+            continue;
+         }
+         if (args[i].equals("-numFoods"))
+         {
+            i++;
+            if (i >= args.length)
+            {
+               System.err.println("Invalid numFoods option");
+               System.err.println(Forage.Usage);
+               System.exit(2);
+            }
+            try
+            {
+               numFoods = Integer.parseInt(args[i]);
+            }
+            catch (NumberFormatException e) {
+               System.err.println("Invalid numFoods option");
+               System.err.println(Forage.Usage);
+               System.exit(2);
+            }
+            if (numFoods < 0)
+            {
+               System.err.println("Invalid numFoods option");
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             continue;
@@ -732,7 +791,7 @@ public class Nest
             if (i >= args.length)
             {
                System.err.println("Invalid numNeighborhoods option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             try
@@ -741,13 +800,13 @@ public class Nest
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid numNeighborhoods option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             if (NUM_NEIGHBORHOODS < 0)
             {
                System.err.println("Invalid numNeighborhoods option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             gotParm = true;
@@ -759,7 +818,7 @@ public class Nest
             if (i >= args.length)
             {
                System.err.println("Invalid neighborhoodInitialDimension option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             try
@@ -768,14 +827,14 @@ public class Nest
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid neighborhoodInitialDimension option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             if ((NEIGHBORHOOD_INITIAL_DIMENSION < 3) ||
                 ((NEIGHBORHOOD_INITIAL_DIMENSION % 2) == 0))
             {
                System.err.println("Invalid neighborhoodInitialDimension option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             gotParm = true;
@@ -787,7 +846,7 @@ public class Nest
             if (i >= args.length)
             {
                System.err.println("Invalid neighborhoodDimensionStride option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             try
@@ -796,13 +855,13 @@ public class Nest
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid neighborhoodDimensionStride option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             if (NEIGHBORHOOD_DIMENSION_STRIDE < 0)
             {
                System.err.println("Invalid neighborhoodDimensionStride option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             gotParm = true;
@@ -814,7 +873,7 @@ public class Nest
             if (i >= args.length)
             {
                System.err.println("Invalid neighborhoodDimensionMultiplier option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             try
@@ -823,13 +882,13 @@ public class Nest
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid neighborhoodDimensionMultiplier option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             if (NEIGHBORHOOD_DIMENSION_MULTIPLIER < 0)
             {
                System.err.println("Invalid neighborhoodDimensionMultiplier option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             gotParm = true;
@@ -841,7 +900,7 @@ public class Nest
             if (i >= args.length)
             {
                System.err.println("Invalid epochIntervalStride option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             try
@@ -850,13 +909,13 @@ public class Nest
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid epochIntervalStride option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             if (EPOCH_INTERVAL_STRIDE < 0)
             {
                System.err.println("Invalid epochIntervalStride option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             gotParm = true;
@@ -868,7 +927,7 @@ public class Nest
             if (i >= args.length)
             {
                System.err.println("Invalid epochIntervalMultiplier option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             try
@@ -877,13 +936,13 @@ public class Nest
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid epochIntervalMultiplier option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             if (EPOCH_INTERVAL_MULTIPLIER < 0)
             {
                System.err.println("Invalid epochIntervalMultiplier option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             gotParm = true;
@@ -895,7 +954,7 @@ public class Nest
             if (i >= args.length)
             {
                System.err.println("Invalid randomSeed option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             try
@@ -904,7 +963,7 @@ public class Nest
             }
             catch (NumberFormatException e) {
                System.err.println("Invalid randomSeed option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             continue;
@@ -915,7 +974,7 @@ public class Nest
             if (i >= args.length)
             {
                System.err.println("Invalid load option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             if (loadfile == null)
@@ -925,7 +984,7 @@ public class Nest
             else
             {
                System.err.println("Duplicate load option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             continue;
@@ -936,7 +995,7 @@ public class Nest
             if (i >= args.length)
             {
                System.err.println("Invalid save option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             if (savefile == null)
@@ -946,27 +1005,27 @@ public class Nest
             else
             {
                System.err.println("Duplicate save option");
-               System.err.println(Nest.Usage);
+               System.err.println(Forage.Usage);
                System.exit(2);
             }
             continue;
          }
-         System.err.println(Nest.Usage);
+         System.err.println(Forage.Usage);
          System.exit(2);
       }
 
       // Check options.
       if (((steps < 0) && !display) || ((steps >= 0) && display))
       {
-         System.err.println(Nest.Usage);
+         System.err.println(Forage.Usage);
          System.exit(2);
       }
       if (!display)
       {
-         if (driver == NestingMox.DRIVER_TYPE.MANUAL.getValue())
+         if (driver == ForagerMox.DRIVER_TYPE.MANUAL.getValue())
          {
             System.err.println("Cannot run manually without display");
-            System.err.println(Nest.Usage);
+            System.err.println(Forage.Usage);
             System.exit(2);
          }
       }
@@ -974,17 +1033,20 @@ public class Nest
       {
          if ((width == -1) || (height == -1))
          {
-            System.err.println(Nest.Usage);
+            System.err.println(Forage.Usage);
             System.exit(2);
          }
-         if (numStones == -1) { numStones = 0; }
+         if (numMoxen == -1) { numMoxen = 0; }
+         if (numLandmarkTypes == -1) { numLandmarkTypes = 1; }
+         if (numLandmarks == -1) { numLandmarks = 0; }
+         if (numFoods == -1) { numFoods = 0; }
       }
       else
       {
-         if ((maxElevation != -1) || (numStones != -1) ||
-             (width != -1) || (height != -1) || gotParm)
+         if ((numMoxen != -1) || (numLandmarkTypes != -1) || (numLandmarks != -1) ||
+             (numFoods != -1) || (width != -1) || (height != -1) || gotParm)
          {
-            System.err.println(Nest.Usage);
+            System.err.println(Forage.Usage);
             System.exit(2);
          }
       }
@@ -999,12 +1061,13 @@ public class Nest
       }
 
       // Create world.
-      Nest nest = new Nest(randomSeed);
+      Forage forage = new Forage();
+      forage.random = new Random(randomSeed);
       if (loadfile != null)
       {
          try
          {
-            nest.load(loadfile);
+            forage.load(loadfile);
          }
          catch (Exception e)
          {
@@ -1016,13 +1079,14 @@ public class Nest
       {
          try
          {
-            nest.init(width, height, numStones,
-                      NUM_NEIGHBORHOODS,
-                      NEIGHBORHOOD_INITIAL_DIMENSION,
-                      NEIGHBORHOOD_DIMENSION_STRIDE,
-                      NEIGHBORHOOD_DIMENSION_MULTIPLIER,
-                      EPOCH_INTERVAL_STRIDE,
-                      EPOCH_INTERVAL_MULTIPLIER);
+            forage.initCells(width, height, numLandmarkTypes, numLandmarks, numFoods);
+            forage.createMoxen(numMoxen, numLandmarkTypes + 1,
+                               NUM_NEIGHBORHOODS,
+                               NEIGHBORHOOD_INITIAL_DIMENSION,
+                               NEIGHBORHOOD_DIMENSION_STRIDE,
+                               NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                               EPOCH_INTERVAL_STRIDE,
+                               EPOCH_INTERVAL_MULTIPLIER);
          }
          catch (Exception e)
          {
@@ -1032,28 +1096,20 @@ public class Nest
       }
 
       // Create display?
-      SectorDisplay.graduatedColors = new boolean[NestingMox.NUM_SENSORS];
-      SectorDisplay.graduatedColors[NestingMox.STONE_AHEAD_SENSOR_INDEX]      = false;
-      SectorDisplay.graduatedColors[NestingMox.FORWARD_GRADIENT_SENSOR_INDEX] = true;
-      SectorDisplay.graduatedColors[NestingMox.LATERAL_GRADIENT_SENSOR_INDEX] = true;
-      SectorDisplay.graduatedColors[NestingMox.CARRIED_STONE_SENSOR_INDEX]    = false;
-      SectorDisplay.graduatedColorMaximums = new int[NestingMox.NUM_SENSORS];
-      SectorDisplay.graduatedColorMaximums[NestingMox.FORWARD_GRADIENT_SENSOR_INDEX] = NestCells.MAX_ELEVATION_VALUE;
-      SectorDisplay.graduatedColorMaximums[NestingMox.LATERAL_GRADIENT_SENSOR_INDEX] = NestCells.MAX_ELEVATION_VALUE;
       if (display)
       {
-         nest.createDisplay();
+         forage.createDisplay();
       }
       else
       {
-         nest.reset();
+         forage.reset();
       }
 
       // Set mox driver.
-      for (NestingMox mox : nest.moxen)
+      for (ForagerMox mox : forage.moxen)
       {
          mox.driver = driver;
-         if (driver == NestingMox.DRIVER_TYPE.METAMORPH_NN.getValue())
+         if (driver == ForagerMox.DRIVER_TYPE.METAMORPH_NN.getValue())
          {
             try
             {
@@ -1068,20 +1124,27 @@ public class Nest
       }
 
       // Run.
-      nest.run(steps);
+      int foodCount = forage.run(steps);
 
       // Save?
       if (savefile != null)
       {
          try
          {
-            nest.save(savefile);
+            forage.save(savefile);
          }
          catch (Exception e)
          {
             System.err.println("Cannot save to file " + savefile + ": " + e.getMessage());
          }
       }
-      System.exit(0);
+      if (foodCount > 0)
+      {
+         System.exit(1);
+      }
+      else
+      {
+         System.exit(0);
+      }
    }
 }

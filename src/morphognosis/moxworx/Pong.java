@@ -2,7 +2,7 @@
 
 // Pong game task.
 
-package moxworx;
+package morphognosis.moxworx;
 
 import java.util.*;
 import java.io.*;

@@ -2,7 +2,7 @@
  * Evolve foraging mox by mutating and recombining parameters.
  */
 
-package moxworx;
+package morphognosis.moxworx;
 
 import java.util.*;
 
@@ -80,7 +80,7 @@ public class EvolveForage
 
 
    // Save parameters.
-   public void saveParameters(PrintWriter writer) throws IOException
+   public void saveParameters(DataOutputStream writer) throws IOException
    {
       Utility.saveInt(writer, WIDTH);
       Utility.saveInt(writer, HEIGHT);
@@ -779,12 +779,12 @@ public class EvolveForage
    {
       int              i, n;
       FileOutputStream output = null;
-      PrintWriter      writer = null;
+      DataOutputStream writer = null;
 
       try
       {
          output = new FileOutputStream(new File(OutputFileName));
-         writer = new PrintWriter(output);
+         writer = new DataOutputStream(new BufferedOutputStream(output));
       }
       catch (Exception e) {
          System.err.println("Cannot open output file " + OutputFileName +
@@ -1233,7 +1233,7 @@ public class EvolveForage
       // Save member.
       void save(FileOutputStream output) throws IOException
       {
-         PrintWriter writer = new PrintWriter(new OutputStreamWriter(output));
+         DataOutputStream writer = new DataOutputStream(new BufferedOutputStream(output));
 
          Utility.saveInt(writer, id);
          Utility.saveInt(writer, generation);

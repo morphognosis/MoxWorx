@@ -2,7 +2,7 @@
 
 // Nest cells.
 
-package moxworx;
+package morphognosis.moxworx;
 
 import java.io.*;
 import java.security.SecureRandom;
@@ -211,7 +211,7 @@ public class NestCells
    {
       int x, y;
 
-      PrintWriter writer = new PrintWriter(output);
+      DataOutputStream writer = new DataOutputStream(new BufferedOutputStream(output));
 
       Utility.saveInt(writer, size.width);
       Utility.saveInt(writer, size.height);

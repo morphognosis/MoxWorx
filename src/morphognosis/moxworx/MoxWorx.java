@@ -24,7 +24,7 @@
 
 // MoxWorx.
 
-package moxworx;
+package morphognosis.moxworx;
 
 import java.awt.Color;
 

@@ -1,8 +1,8 @@
 // For conditions of distribution and use, see copyright notice in MoxWorx.java
 
-//  Forager mox dashboard.
+//  Nesting mox dashboard.
 
-package moxworx;
+package morphognosis.moxworx;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -10,13 +10,9 @@ import javax.swing.*;
 
 import morphognosis.MorphognosticDisplay;
 
-public class ForagerMoxDashboard extends JFrame
+public class NestingMoxDashboard extends JFrame
 {
    private static final long serialVersionUID = 0L;
-
-   // Sensor semantics.
-   static final int LANDMARK_SENSOR_INDEX = 0;
-   static final int FOOD_SENSOR_INDEX     = 1;
 
    // Components.
    SensorsResponsePanel sensorsResponse;
@@ -24,14 +20,14 @@ public class ForagerMoxDashboard extends JFrame
    MorphognosticDisplay morphognostic;
 
    // Targets.
-   ForagerMox    mox;
-   ForageDisplay forageDisplay;
+   NestingMox  mox;
+   NestDisplay nestDisplay;
 
    // Constructor.
-   public ForagerMoxDashboard(ForagerMox mox, ForageDisplay forageDisplay)
+   public NestingMoxDashboard(NestingMox mox, NestDisplay nestDisplay)
    {
-      this.mox           = mox;
-      this.forageDisplay = forageDisplay;
+      this.mox         = mox;
+      this.nestDisplay = nestDisplay;
 
       setTitle("Mox " + mox.id);
       addWindowListener(new WindowAdapter()
@@ -69,28 +65,66 @@ public class ForagerMoxDashboard extends JFrame
    // Update dashboard.
    void update()
    {
-      float f = (float)((int)(mox.sensors[FOOD_SENSOR_INDEX] * 100.0f)) / 100.0f;
+      String forwardGradientString;
 
-      setSensors(mox.sensors[LANDMARK_SENSOR_INDEX] + "", f + "");
-      if (mox.response == ForagerMox.WAIT)
+      if (mox.sensors[NestingMox.FORWARD_GRADIENT_SENSOR_INDEX] == NestingMox.FLAT_GRADIENT)
+      {
+         forwardGradientString = "flat";
+      }
+      else if (mox.sensors[NestingMox.FORWARD_GRADIENT_SENSOR_INDEX] == NestingMox.PEAK_GRADIENT)
+      {
+         forwardGradientString = "peak";
+      }
+      else if (mox.sensors[NestingMox.FORWARD_GRADIENT_SENSOR_INDEX] == NestingMox.FORWARD_UP_GRADIENT)
+      {
+         forwardGradientString = "up";
+      }
+      else
+      {
+         forwardGradientString = "down";
+      }
+      String lateralGradientString;
+      if (mox.sensors[NestingMox.LATERAL_GRADIENT_SENSOR_INDEX] == NestingMox.FLAT_GRADIENT)
+      {
+         lateralGradientString = "flat";
+      }
+      else if (mox.sensors[NestingMox.LATERAL_GRADIENT_SENSOR_INDEX] == NestingMox.PEAK_GRADIENT)
+      {
+         lateralGradientString = "peak";
+      }
+      else if (mox.sensors[NestingMox.LATERAL_GRADIENT_SENSOR_INDEX] == NestingMox.RIGHT_UP_GRADIENT)
+      {
+         lateralGradientString = "right up";
+      }
+      else
+      {
+         lateralGradientString = "left up";
+      }
+      setSensors(mox.sensors[NestingMox.STONE_AHEAD_SENSOR_INDEX] + "",
+                 forwardGradientString, lateralGradientString);
+      if (mox.response == NestingMox.WAIT)
       {
          setResponse("wait");
       }
-      else if (mox.response == ForagerMox.FORWARD)
+      else if (mox.response == NestingMox.FORWARD)
       {
          setResponse("move forward");
       }
-      else if (mox.response == ForagerMox.RIGHT)
+      else if (mox.response == NestingMox.RIGHT)
       {
          setResponse("turn right");
       }
-      else if (mox.response == ForagerMox.LEFT)
+      else if (mox.response == NestingMox.LEFT)
       {
          setResponse("turn left");
       }
-      else if (mox.response == ForagerMox.EAT)
+      else if (mox.response == NestingMox.TAKE_STONE)
       {
-         setResponse("eat");
+         setResponse("take stone");
+      }
+      else if (mox.response == NestingMox.DROP_STONE)
+      {
+         setResponse("drop stone");
       }
       else
       {
@@ -112,16 +146,26 @@ public class ForagerMoxDashboard extends JFrame
    {
       morphognostic.close();
       setVisible(false);
-      forageDisplay.closeMoxDashboard();
+      nestDisplay.closeMoxDashboard();
    }
 
 
    // Set sensors display.
-   void setSensors(String landmarkSensorString,
-                   String foodSensorString)
+   void setSensors(String stoneAheadSensorString,
+                   String forwardGradientSensorString,
+                   String lateralGradientSensorString)
    {
-      sensorsResponse.landmarkText.setText(landmarkSensorString);
-      sensorsResponse.foodText.setText(foodSensorString);
+      sensorsResponse.stoneAheadText.setText(stoneAheadSensorString);
+      sensorsResponse.forwardGradientText.setText(forwardGradientSensorString);
+      sensorsResponse.lateralGradientText.setText(lateralGradientSensorString);
+      if (mox.hasStone)
+      {
+         sensorsResponse.hasStoneText.setText("true");
+      }
+      else
+      {
+         sensorsResponse.hasStoneText.setText("false");
+      }
    }
 
 
@@ -138,8 +182,10 @@ public class ForagerMoxDashboard extends JFrame
       private static final long serialVersionUID = 0L;
 
       // Components.
-      JTextField landmarkText;
-      JTextField foodText;
+      JTextField stoneAheadText;
+      JTextField hasStoneText;
+      JTextField forwardGradientText;
+      JTextField lateralGradientText;
       JTextField responseText;
 
       // Constructor.
@@ -152,20 +198,28 @@ public class ForagerMoxDashboard extends JFrame
          JPanel sensorsPanel = new JPanel();
          sensorsPanel.setLayout(new BorderLayout());
          add(sensorsPanel, BorderLayout.NORTH);
-         JPanel landmarkPanel = new JPanel();
-         landmarkPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-         sensorsPanel.add(landmarkPanel, BorderLayout.NORTH);
-         landmarkPanel.add(new JLabel("Landmark:"));
-         landmarkText = new JTextField(10);
-         landmarkText.setEditable(false);
-         landmarkPanel.add(landmarkText);
-         JPanel foodPanel = new JPanel();
-         foodPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-         sensorsPanel.add(foodPanel, BorderLayout.CENTER);
-         foodPanel.add(new JLabel("Food:"));
-         foodText = new JTextField(10);
-         foodText.setEditable(false);
-         foodPanel.add(foodText);
+         JPanel stonePanel = new JPanel();
+         stonePanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+         sensorsPanel.add(stonePanel, BorderLayout.NORTH);
+         stonePanel.add(new JLabel("Stone ahead:"));
+         stoneAheadText = new JTextField(10);
+         stoneAheadText.setEditable(false);
+         stonePanel.add(stoneAheadText);
+         stonePanel.add(new JLabel("Stone carried:"));
+         hasStoneText = new JTextField(10);
+         hasStoneText.setEditable(false);
+         stonePanel.add(hasStoneText);
+         JPanel gradientPanel = new JPanel();
+         gradientPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+         sensorsPanel.add(gradientPanel, BorderLayout.CENTER);
+         gradientPanel.add(new JLabel("Forward:"));
+         forwardGradientText = new JTextField(10);
+         forwardGradientText.setEditable(false);
+         gradientPanel.add(forwardGradientText);
+         gradientPanel.add(new JLabel("Lateral:"));
+         lateralGradientText = new JTextField(10);
+         lateralGradientText.setEditable(false);
+         gradientPanel.add(lateralGradientText);
          JPanel responsePanel = new JPanel();
          responsePanel.setLayout(new FlowLayout(FlowLayout.LEFT));
          add(responsePanel, BorderLayout.SOUTH);
@@ -200,7 +254,8 @@ public class ForagerMoxDashboard extends JFrame
       JButton  turnLeftButton;
       JButton  moveForwardButton;
       JButton  turnRightButton;
-      JButton  eatButton;
+      JButton  takeStoneButton;
+      JButton  dropStoneButton;
       Checkbox trainNNcheck;
 
       // Constructor.
@@ -232,9 +287,12 @@ public class ForagerMoxDashboard extends JFrame
          turnRightButton = new JButton("Right");
          turnRightButton.addActionListener(this);
          responsePanel.add(turnRightButton);
-         eatButton = new JButton("Eat");
-         eatButton.addActionListener(this);
-         responsePanel.add(eatButton);
+         takeStoneButton = new JButton("Take");
+         takeStoneButton.addActionListener(this);
+         responsePanel.add(takeStoneButton);
+         dropStoneButton = new JButton("Drop");
+         dropStoneButton.addActionListener(this);
+         responsePanel.add(dropStoneButton);
          JPanel trainNNpanel = new JPanel();
          trainNNpanel.setLayout(new FlowLayout(FlowLayout.LEFT));
          add(trainNNpanel, BorderLayout.SOUTH);
@@ -266,7 +324,7 @@ public class ForagerMoxDashboard extends JFrame
                }
                catch (Exception e)
                {
-                  forageDisplay.controls.messageText.setText("Cannot train metamorph NN: " + e.getMessage());
+                  nestDisplay.controls.messageText.setText("Cannot train metamorph NN: " + e.getMessage());
                }
                trainNNcheck.setState(false);
             }
@@ -280,25 +338,31 @@ public class ForagerMoxDashboard extends JFrame
       {
          if ((JButton)evt.getSource() == turnLeftButton)
          {
-            mox.driverResponse = ForagerMox.LEFT;
+            mox.driverResponse = NestingMox.LEFT;
             return;
          }
 
          if ((JButton)evt.getSource() == moveForwardButton)
          {
-            mox.driverResponse = ForagerMox.FORWARD;
+            mox.driverResponse = NestingMox.FORWARD;
             return;
          }
 
          if ((JButton)evt.getSource() == turnRightButton)
          {
-            mox.driverResponse = ForagerMox.RIGHT;
+            mox.driverResponse = NestingMox.RIGHT;
             return;
          }
 
-         if ((JButton)evt.getSource() == eatButton)
+         if ((JButton)evt.getSource() == takeStoneButton)
          {
-            mox.driverResponse = ForagerMox.EAT;
+            mox.driverResponse = NestingMox.TAKE_STONE;
+            return;
+         }
+
+         if ((JButton)evt.getSource() == dropStoneButton)
+         {
+            mox.driverResponse = NestingMox.DROP_STONE;
             return;
          }
       }

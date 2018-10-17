@@ -1,12 +1,12 @@
 // For conditions of distribution and use, see copyright notice in MoxWorx.java
 
-// Foraging mox: mophognosis organism.
+// Nesting mox: morphognosis organism.
 
-package moxworx;
+package morphognosis.moxworx;
 
 import java.io.*;
+import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Vector;
 
 import morphognosis.Metamorph;
@@ -23,18 +23,20 @@ import weka.core.Instances;
 import weka.core.Utils;
 import weka.core.converters.ArffSaver;
 
-public class ForagerMox
+public class NestingMox
 {
    // Properties.
-   public int         id;
-   public int         x, y;
-   public int         direction;
-   public ForageCells forageCells;
-   public int         numLandmarkTypes;
-   public int         x2, y2;
-   public int         direction2;
-   public int         driver;
-   public int         driverResponse;
+   public int          id;
+   public int          x, y;
+   public int          direction;
+   public boolean      hasStone;
+   public NestCells    nestCells;
+   public int          x2, y2;
+   public int          direction2;
+   public int          driver;
+   public int          driverResponse;
+   public int          randomSeed;
+   public SecureRandom random;
 
    // Current morphognostic.
    public Morphognostic morphognostic;
@@ -53,35 +55,55 @@ public class ForagerMox
    int response;
 
    // Sensor dimensions.
-   public static final int NUM_SENSORS = 2;
+   public static final int NUM_SENSORS = 4;
+   public static final int STONE_AHEAD_SENSOR_INDEX      = 0;
+   public static final int FORWARD_GRADIENT_SENSOR_INDEX = 1;
+   public static final int LATERAL_GRADIENT_SENSOR_INDEX = 2;
+   public static final int CARRIED_STONE_SENSOR_INDEX    = 3;
+
+   // Gradient sensor values.
+   public static final int FLAT_GRADIENT         = 0;
+   public static final int PEAK_GRADIENT         = 1;
+   public static final int FORWARD_UP_GRADIENT   = 2;
+   public static final int FORWARD_DOWN_GRADIENT = 3;
+   public static final int LEFT_UP_GRADIENT      = 2;
+   public static final int RIGHT_UP_GRADIENT     = 3;
+   public static final int NUM_GRADIENT_VALUES   = 4;
 
    // Response types.
    public static final int WAIT          = 0;
    public static final int FORWARD       = 1;
    public static final int RIGHT         = 2;
    public static final int LEFT          = 3;
-   public static final int EAT           = 4;
-   public static final int NUM_RESPONSES = 5;
+   public static final int TAKE_STONE    = 4;
+   public static final int DROP_STONE    = 5;
+   public static final int NUM_RESPONSES = 6;
 
    // Navigation.
    public boolean[][] landmarkMap;
-   public int         maxLandmarkEventAge;
-   public class LandmarkEvent
+   public int         maxEventAge;
+   public class Event
    {
-      public int value;
-      public int x;
-      public int y;
-      public int time;
-      public LandmarkEvent(int value, int x, int y, int time)
+      public int[] values;
+      public int   x;
+      public int   y;
+      public int   time;
+      public Event(int[] values, int x, int y, int time)
       {
-         this.value = value;
-         this.x     = x;
-         this.y     = y;
-         this.time  = time;
+         int n = values.length;
+
+         this.values = new int[n];
+         for (int i = 0; i < n; i++)
+         {
+            this.values[i] = values[i];
+         }
+         this.x    = x;
+         this.y    = y;
+         this.time = time;
       }
    }
-   public Vector<LandmarkEvent> landmarkEvents;
-   public int eventTime;
+   public Vector<Event> events;
+   public int           eventTime;
 
    // Driver type.
    public enum DRIVER_TYPE
@@ -105,23 +127,28 @@ public class ForagerMox
    }
 
    // Constructors.
-   public ForagerMox(int id, int x, int y, int direction, int numLandmarkTypes, ForageCells forageCells)
+   public NestingMox(int id, int x, int y, int direction, NestCells nestCells, int randomSeed)
    {
-      this.id               = id;
-      this.forageCells      = forageCells;
-      this.numLandmarkTypes = numLandmarkTypes;
+      this.id         = id;
+      this.nestCells  = nestCells;
+      this.randomSeed = randomSeed;
+      random          = new SecureRandom();
+      random.setSeed(randomSeed);
       init(x, y, direction);
-      int[] numEventTypes = new int[1];
-      numEventTypes[0]    = numLandmarkTypes;
-      morphognostic       = new Morphognostic(direction, numEventTypes);
+      int [] numEventTypes = new int[NUM_SENSORS];
+      numEventTypes[STONE_AHEAD_SENSOR_INDEX]      = NestCells.NUM_STONE_VALUES;
+      numEventTypes[FORWARD_GRADIENT_SENSOR_INDEX] = NUM_GRADIENT_VALUES;
+      numEventTypes[LATERAL_GRADIENT_SENSOR_INDEX] = NUM_GRADIENT_VALUES;
+      numEventTypes[CARRIED_STONE_SENSOR_INDEX]    = 2;
+      morphognostic = new Morphognostic(direction, numEventTypes);
       Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(morphognostic.NUM_NEIGHBORHOODS - 1);
-      maxLandmarkEventAge = n.epoch + n.duration - 1;
-      metamorphs          = new ArrayList<Metamorph>();
+      maxEventAge = n.epoch + n.duration - 1;
+      metamorphs  = new ArrayList<Metamorph>();
       initMetamorphNN();
    }
 
 
-   public ForagerMox(int id, int x, int y, int direction, int numLandmarkTypes, ForageCells forageCells,
+   public NestingMox(int id, int x, int y, int direction, NestCells nestCells, int randomSeed,
                      int NUM_NEIGHBORHOODS,
                      int NEIGHBORHOOD_INITIAL_DIMENSION,
                      int NEIGHBORHOOD_DIMENSION_STRIDE,
@@ -129,38 +156,48 @@ public class ForagerMox
                      int EPOCH_INTERVAL_STRIDE,
                      int EPOCH_INTERVAL_MULTIPLIER)
    {
-      this.id               = id;
-      this.forageCells      = forageCells;
-      this.numLandmarkTypes = numLandmarkTypes;
+      this.id         = id;
+      this.nestCells  = nestCells;
+      this.randomSeed = randomSeed;
+      random          = new SecureRandom();
+      random.setSeed(randomSeed);
       init(x, y, direction);
-      int[] numEventTypes = new int[1];
-      numEventTypes[0]    = numLandmarkTypes;
-      morphognostic       = new Morphognostic(direction, numEventTypes,
-                                              NUM_NEIGHBORHOODS,
-                                              NEIGHBORHOOD_INITIAL_DIMENSION,
-                                              NEIGHBORHOOD_DIMENSION_STRIDE,
-                                              NEIGHBORHOOD_DIMENSION_MULTIPLIER,
-                                              EPOCH_INTERVAL_STRIDE,
-                                              EPOCH_INTERVAL_MULTIPLIER);
+      int [] numEventTypes = new int[NUM_SENSORS];
+      numEventTypes[STONE_AHEAD_SENSOR_INDEX]      = NestCells.NUM_STONE_VALUES;
+      numEventTypes[FORWARD_GRADIENT_SENSOR_INDEX] = NUM_GRADIENT_VALUES;
+      numEventTypes[LATERAL_GRADIENT_SENSOR_INDEX] = NUM_GRADIENT_VALUES;
+      numEventTypes[CARRIED_STONE_SENSOR_INDEX]    = 2;
+      morphognostic = new Morphognostic(direction, numEventTypes,
+                                        NUM_NEIGHBORHOODS,
+                                        NEIGHBORHOOD_INITIAL_DIMENSION,
+                                        NEIGHBORHOOD_DIMENSION_STRIDE,
+                                        NEIGHBORHOOD_DIMENSION_MULTIPLIER,
+                                        EPOCH_INTERVAL_STRIDE,
+                                        EPOCH_INTERVAL_MULTIPLIER);
       Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(morphognostic.NUM_NEIGHBORHOODS - 1);
-      maxLandmarkEventAge = n.epoch + n.duration - 1;
-      metamorphs          = new ArrayList<Metamorph>();
+      maxEventAge = n.epoch + n.duration - 1;
+      metamorphs  = new ArrayList<Metamorph>();
       initMetamorphNN();
    }
 
 
-   public ForagerMox(ForageCells forageCells)
+   public NestingMox(NestCells nestCells, int randomSeed)
    {
-      id = -1;
-      this.forageCells = forageCells;
-      numLandmarkTypes = 1;
+      id              = -1;
+      this.nestCells  = nestCells;
+      this.randomSeed = randomSeed;
+      random          = new SecureRandom();
+      random.setSeed(randomSeed);
       init();
-      int[] numEventTypes = new int[1];
-      numEventTypes[0]    = numLandmarkTypes;
-      morphognostic       = new Morphognostic(direction, numEventTypes);
+      int [] numEventTypes = new int[NUM_SENSORS];
+      numEventTypes[STONE_AHEAD_SENSOR_INDEX]      = NestCells.NUM_STONE_VALUES;
+      numEventTypes[FORWARD_GRADIENT_SENSOR_INDEX] = NUM_GRADIENT_VALUES;
+      numEventTypes[LATERAL_GRADIENT_SENSOR_INDEX] = NUM_GRADIENT_VALUES;
+      numEventTypes[CARRIED_STONE_SENSOR_INDEX]    = 2;
+      morphognostic = new Morphognostic(direction, numEventTypes);
       Morphognostic.Neighborhood n = morphognostic.neighborhoods.get(morphognostic.NUM_NEIGHBORHOODS - 1);
-      maxLandmarkEventAge = n.epoch + n.duration - 1;
-      metamorphs          = new ArrayList<Metamorph>();
+      maxEventAge = n.epoch + n.duration - 1;
+      metamorphs  = new ArrayList<Metamorph>();
       initMetamorphNN();
    }
 
@@ -171,24 +208,25 @@ public class ForagerMox
       this.x         = x2 = x;
       this.y         = y2 = y;
       this.direction = direction2 = direction;
+      hasStone       = false;
       sensors        = new float[NUM_SENSORS];
-      for (int i = 0; i < NUM_SENSORS; i++)
+      for (int n = 0; n < NUM_SENSORS; n++)
       {
-         sensors[i] = 0.0f;
+         sensors[n] = 0.0f;
       }
       response       = WAIT;
       driver         = DRIVER_TYPE.METAMORPH_DB.getValue();
       driverResponse = WAIT;
-      landmarkMap    = new boolean[forageCells.size.width][forageCells.size.height];
-      for (int i = 0; i < forageCells.size.width; i++)
+      landmarkMap    = new boolean[nestCells.size.width][nestCells.size.height];
+      for (int i = 0; i < nestCells.size.width; i++)
       {
-         for (int j = 0; j < forageCells.size.height; j++)
+         for (int j = 0; j < nestCells.size.height; j++)
          {
             landmarkMap[i][j] = false;
          }
       }
-      landmarkEvents = new Vector<LandmarkEvent>();
-      eventTime      = 0;
+      events    = new Vector<Event>();
+      eventTime = 0;
    }
 
 
@@ -201,6 +239,7 @@ public class ForagerMox
    // Reset state.
    void reset()
    {
+      random.setSeed(randomSeed);
       x         = x2;
       y         = y2;
       direction = direction2;
@@ -210,14 +249,14 @@ public class ForagerMox
       }
       response       = WAIT;
       driverResponse = WAIT;
-      for (int i = 0; i < forageCells.size.width; i++)
+      for (int i = 0; i < nestCells.size.width; i++)
       {
-         for (int j = 0; j < forageCells.size.height; j++)
+         for (int j = 0; j < nestCells.size.height; j++)
          {
             landmarkMap[i][j] = false;
          }
       }
-      landmarkEvents.clear();
+      events.clear();
       morphognostic.clear();
    }
 
@@ -243,22 +282,24 @@ public class ForagerMox
    // Save mox.
    public void save(FileOutputStream output) throws IOException
    {
-      PrintWriter writer = new PrintWriter(new OutputStreamWriter(output));
+      DataOutputStream writer = new DataOutputStream(new BufferedOutputStream(output));
 
       Utility.saveInt(writer, id);
       Utility.saveInt(writer, x);
       Utility.saveInt(writer, y);
       Utility.saveInt(writer, direction);
-      Utility.saveInt(writer, numLandmarkTypes);
+      int n = 0;
+      if (hasStone) { n = 1; }
+      Utility.saveInt(writer, n);
       Utility.saveInt(writer, x2);
       Utility.saveInt(writer, y2);
       Utility.saveInt(writer, direction2);
-      morphognostic.save(output);
-      Utility.saveInt(writer, maxLandmarkEventAge);
+      morphognostic.save(writer);
+      Utility.saveInt(writer, maxEventAge);
       Utility.saveInt(writer, metamorphs.size());
       for (Metamorph m : metamorphs)
       {
-         m.save(output);
+         m.save(writer);
       }
       writer.flush();
    }
@@ -289,64 +330,78 @@ public class ForagerMox
       // DataInputStream is for unbuffered input.
       DataInputStream reader = new DataInputStream(input);
 
-      id                  = Utility.loadInt(reader);
-      x                   = Utility.loadInt(reader);
-      y                   = Utility.loadInt(reader);
-      direction           = Utility.loadInt(reader);
-      numLandmarkTypes    = Utility.loadInt(reader);
-      x2                  = Utility.loadInt(reader);
-      y2                  = Utility.loadInt(reader);
-      direction2          = Utility.loadInt(reader);
-      morphognostic       = Morphognostic.load(input);
-      maxLandmarkEventAge = Utility.loadInt(reader);
-      metamorphs.clear();
+      id        = Utility.loadInt(reader);
+      x         = Utility.loadInt(reader);
+      y         = Utility.loadInt(reader);
+      direction = Utility.loadInt(reader);
       int n = Utility.loadInt(reader);
+      if (n == 0) { hasStone = false; }else{ hasStone = true; }
+      x2            = Utility.loadInt(reader);
+      y2            = Utility.loadInt(reader);
+      direction2    = Utility.loadInt(reader);
+      morphognostic = Morphognostic.load(reader);
+      maxEventAge   = Utility.loadInt(reader);
+      metamorphs.clear();
+      n = Utility.loadInt(reader);
       for (int i = 0; i < n; i++)
       {
-         metamorphs.add(Metamorph.load(input));
+         metamorphs.add(Metamorph.load(reader));
       }
       initMetamorphNN();
    }
 
 
    // Sensor/response cycle.
-   public int cycle(float[] sensors, int fx, int fy)
+   public int cycle(float[] sensors)
    {
-      this.sensors = sensors;
+      this.sensors[STONE_AHEAD_SENSOR_INDEX]      = sensors[STONE_AHEAD_SENSOR_INDEX];
+      this.sensors[FORWARD_GRADIENT_SENSOR_INDEX] = sensors[FORWARD_GRADIENT_SENSOR_INDEX];
+      this.sensors[LATERAL_GRADIENT_SENSOR_INDEX] = sensors[LATERAL_GRADIENT_SENSOR_INDEX];
+      if (hasStone)
+      {
+         this.sensors[CARRIED_STONE_SENSOR_INDEX] = 1.0f;
+      }
+      else
+      {
+         this.sensors[CARRIED_STONE_SENSOR_INDEX] = 0.0f;
+      }
 
       // Update morphognostic.
-      landmarkEvents.add(new LandmarkEvent(forageCells.cells[fx][fy], fx, fy, eventTime));
-      if ((eventTime - landmarkEvents.get(0).time) > maxLandmarkEventAge)
+      int[] values = new int[NUM_SENSORS];
+      for (int i = 0; i < NUM_SENSORS; i++)
       {
-         landmarkEvents.remove(0);
+         values[i] = (int)this.sensors[i];
       }
-      int w = forageCells.size.width;
-      int h = forageCells.size.height;
-      int a = maxLandmarkEventAge + 1;
-      int landmarks[][][][] = new int[w][h][1][a];
-      for (int x = 0; x < w; x++)
+      events.add(new Event(values, x, y, eventTime));
+      if ((eventTime - events.get(0).time) > maxEventAge)
       {
-         for (int y = 0; y < h; y++)
+         events.remove(0);
+      }
+      int w = nestCells.size.width;
+      int h = nestCells.size.height;
+      int a = maxEventAge + 1;
+      int morphEvents[][][][] = new int[w][h][NUM_SENSORS][a];
+      for (int x2 = 0; x2 < w; x2++)
+      {
+         for (int y2 = 0; y2 < h; y2++)
          {
-            for (int t = 0; t < a; t++)
+            for (int n = 0; n < NUM_SENSORS; n++)
             {
-               landmarks[x][y][0][t] = -1;
+               for (int t = 0; t < a; t++)
+               {
+                  morphEvents[x2][y2][n][t] = -1;
+               }
             }
          }
       }
-      for (LandmarkEvent e : landmarkEvents)
+      for (Event e : events)
       {
-         if (e.value >= ForageCells.LANDMARK_CELLS_BEGIN_VALUE)
+         for (int n = 0; n < NUM_SENSORS; n++)
          {
-            landmarks[e.x][e.y][0][eventTime - e.time] =
-               e.value - ForageCells.LANDMARK_CELLS_BEGIN_VALUE + 1;
-         }
-         else
-         {
-            landmarks[e.x][e.y][0][eventTime - e.time] = MoxWorx.EMPTY_CELL_VALUE;
+            morphEvents[e.x][e.y][n][eventTime - e.time] = e.values[n];
          }
       }
-      morphognostic.update(landmarks, x, y);
+      morphognostic.update(morphEvents, x, y);
 
       // Respond.
       if (driver == DRIVER_TYPE.METAMORPH_DB.getValue())
@@ -402,6 +457,17 @@ public class ForagerMox
             d         = d2;
             metamorph = m;
          }
+         else
+         {
+            if (d2 == d)
+            {
+               if (random.nextBoolean())
+               {
+                  d         = d2;
+                  metamorph = m;
+               }
+            }
+         }
       }
       if (metamorph != null)
       {
@@ -420,177 +486,181 @@ public class ForagerMox
    // Autopilot response.
    void autoResponse()
    {
-      // Search for best response leading to food.
-      int fx, fy;
-      int left, right;
-      int r;
-      int w = forageCells.size.width;
-      int h = forageCells.size.height;
-
-      ArrayList<FoodSearch> open   = new ArrayList<FoodSearch>();
-      ArrayList<FoodSearch> closed = new ArrayList<FoodSearch>();
+      // Default response.
       response = WAIT;
-      FoodSearch current = new FoodSearch(EAT, x, y, direction, 0);
-      if (current.foodDist == -1)
+
+      // Mox has stone?
+      if (hasStone)
       {
-         return;
-      }
-      open.add(current);
-      FoodSearch next;
-      boolean    found;
-      while (open.size() > 0)
-      {
-         current = open.get(0);
-         open.remove(0);
-         closed.add(current);
-         switch (current.dir)
+         // Returned to nest?
+         if ((sensors[FORWARD_GRADIENT_SENSOR_INDEX] == (int)PEAK_GRADIENT) &&
+             (sensors[LATERAL_GRADIENT_SENSOR_INDEX] == (int)PEAK_GRADIENT))
          {
-         case Orientation.NORTH:
-            fx    = current.x;
-            fy    = ((current.y + 1) % h);
-            left  = Orientation.WEST;
-            right = Orientation.EAST;
-            break;
-
-         case Orientation.EAST:
-            fx    = (current.x + 1) % w;
-            fy    = current.y;
-            left  = Orientation.NORTH;
-            right = Orientation.SOUTH;
-            break;
-
-         case Orientation.SOUTH:
-            fx = current.x;
-            fy = current.y - 1;
-            if (fy < 0) { fy += h; }
-            left  = Orientation.EAST;
-            right = Orientation.WEST;
-            break;
-
-         case Orientation.WEST:
-            fx = current.x - 1;
-            if (fx < 0) { fx += w; }
-            fy    = current.y;
-            left  = Orientation.SOUTH;
-            right = Orientation.NORTH;
-            break;
-
-         default:
-            fx    = -1;
-            fy    = -1;
-            left  = Orientation.WEST;
-            right = Orientation.EAST;
-            break;
-         }
-         if (forageCells.cells[fx][fy] == ForageCells.FOOD_CELL_VALUE)
-         {
-            response = current.response;
+            if (sensors[STONE_AHEAD_SENSOR_INDEX] == (int)NestCells.STONE_CELL_VALUE)
+            {
+               response = RIGHT;
+            }
+            else
+            {
+               response = DROP_STONE;
+            }
             return;
          }
-         r = current.response;
-         if (current.response == EAT)
+
+         // Return to nest.
+         switch ((int)sensors[FORWARD_GRADIENT_SENSOR_INDEX])
          {
-            r = FORWARD;
-         }
-         if (!landmarkMap[fx][fy])
-         {
-            next  = new FoodSearch(r, fx, fy, current.dir, current.depth + 1);
-            found = false;
-            for (FoodSearch s : closed)
+         case FLAT_GRADIENT:
+            switch ((int)sensors[LATERAL_GRADIENT_SENSOR_INDEX])
             {
-               if (next.equals(s))
+            case FLAT_GRADIENT:
+               randomMovement();
+               return;
+
+            case PEAK_GRADIENT:
+               randomMovement();
+               return;
+
+            case RIGHT_UP_GRADIENT:
+               response = RIGHT;
+               return;
+
+            case LEFT_UP_GRADIENT:
+               response = LEFT;
+               return;
+            }
+            break;
+
+         case PEAK_GRADIENT:
+            switch ((int)sensors[LATERAL_GRADIENT_SENSOR_INDEX])
+            {
+            case FLAT_GRADIENT:
+               randomMovement();
+               return;
+
+            case PEAK_GRADIENT:
+               randomMovement();
+               return;
+
+            case RIGHT_UP_GRADIENT:
+               response = RIGHT;
+               return;
+
+            case LEFT_UP_GRADIENT:
+               response = LEFT;
+               return;
+            }
+            break;
+
+         case FORWARD_UP_GRADIENT:
+            switch ((int)sensors[LATERAL_GRADIENT_SENSOR_INDEX])
+            {
+            case FLAT_GRADIENT:
+               response = FORWARD;
+               return;
+
+            case PEAK_GRADIENT:
+               response = FORWARD;
+               return;
+
+            case RIGHT_UP_GRADIENT:
+               if (random.nextBoolean())
                {
-                  found = true;
-                  break;
+                  response = FORWARD;
                }
+               else
+               {
+                  response = RIGHT;
+               }
+               return;
+
+            case LEFT_UP_GRADIENT:
+               if (random.nextBoolean())
+               {
+                  response = FORWARD;
+               }
+               else
+               {
+                  response = LEFT;
+               }
+               return;
             }
-            if (!found)
+            break;
+
+         case FORWARD_DOWN_GRADIENT:
+            switch ((int)sensors[LATERAL_GRADIENT_SENSOR_INDEX])
             {
-               open.add(next);
+            case FLAT_GRADIENT:
+               response = RIGHT;
+               return;
+
+            case PEAK_GRADIENT:
+               response = RIGHT;
+               return;
+
+            case RIGHT_UP_GRADIENT:
+               response = RIGHT;
+               return;
+
+            case LEFT_UP_GRADIENT:
+               response = LEFT;
+               return;
             }
+            break;
          }
-         if (current.response == EAT)
+      }
+      else
+      {
+         // Check nest?
+         if ((sensors[FORWARD_GRADIENT_SENSOR_INDEX] == (int)PEAK_GRADIENT) &&
+             (sensors[LATERAL_GRADIENT_SENSOR_INDEX] == (int)PEAK_GRADIENT))
          {
-            r = LEFT;
-         }
-         next  = new FoodSearch(r, current.x, current.y, left, current.depth + 1);
-         found = false;
-         for (FoodSearch s : closed)
-         {
-            if (next.equals(s))
+            if (sensors[STONE_AHEAD_SENSOR_INDEX] == (int)NestCells.STONE_CELL_VALUE)
             {
-               found = true;
-               break;
+               response = RIGHT;
             }
-         }
-         if (!found)
-         {
-            open.add(next);
-         }
-         if (current.response == EAT)
-         {
-            r = RIGHT;
-         }
-         next  = new FoodSearch(r, current.x, current.y, right, current.depth + 1);
-         found = false;
-         for (FoodSearch s : closed)
-         {
-            if (next.equals(s))
+            else
             {
-               found = true;
-               break;
+               response = FORWARD;
             }
+            return;
          }
-         if (!found)
+
+         // Take stone?
+         if (sensors[STONE_AHEAD_SENSOR_INDEX] == (int)NestCells.STONE_CELL_VALUE)
          {
-            open.add(next);
+            response = TAKE_STONE;
+            return;
          }
-         Collections.sort(open);
+
+         // Random search for stone.
+         randomMovement();
+         return;
       }
    }
 
 
-   // Food search state.
-   class FoodSearch implements Comparable<FoodSearch>
+   // Random movement.
+   void randomMovement()
    {
-      int response;
-      int x, y;
-      int dir;
-      int depth;
-      int foodDist;
-
-      // Constructor.
-      FoodSearch(int response, int x, int y, int dir, int depth)
+      switch (random.nextInt(5))
       {
-         this.response = response;
-         this.x        = x;
-         this.y        = y;
-         this.dir      = dir;
-         this.depth    = depth;
-         foodDist      = depth + forageCells.foodDist(x, y);
-      }
+      case 0:
+      case 1:
+      case 2:
+         response = FORWARD;
+         return;
 
+      case 3:
+         response = LEFT;
+         return;
 
-      // Equal comparison.
-      boolean equals(FoodSearch s)
-      {
-         if ((x == s.x) && (y == s.y) && (dir == s.dir))
-         {
-            return(true);
-         }
-         else
-         {
-            return(false);
-         }
-      }
-
-
-      @Override
-      public int compareTo(FoodSearch s)
-      {
-         return(foodDist - s.foodDist);
+      case 4:
+         response = RIGHT;
+         return;
       }
    }
+
 
    // Initialize metamorph neural network.
    public void initMetamorphNN()

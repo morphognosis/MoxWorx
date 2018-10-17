@@ -2,7 +2,7 @@
 
 // Forage display.
 
-package moxworx;
+package morphognosis.moxworx;
 
 import java.util.*;
 import java.awt.*;

@@ -2,7 +2,7 @@
  * Genome.
  */
 
-package moxworx;
+package morphognosis.moxworx;
 
 import java.util.*;
 import java.io.*;
@@ -116,7 +116,7 @@ public class Genome
 
 
    // Save values.
-   void saveValues(PrintWriter writer) throws IOException
+   void saveValues(DataOutputStream writer) throws IOException
    {
       for (int i = 0; i < genes.size(); i++)
       {

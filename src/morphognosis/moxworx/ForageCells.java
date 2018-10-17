@@ -1,8 +1,8 @@
 // For conditions of distribution and use, see copyright notice in MoxWorx.java
 
-// Pong game cells.
+// Forage cells.
 
-package moxworx;
+package morphognosis.moxworx;
 
 import java.io.*;
 
@@ -10,11 +10,18 @@ import morphognosis.Utility;
 
 import java.awt.*;
 
-public class PongCells
+public class ForageCells
 {
    // Cell values.
    // See MoxWorx.EMPTY_CELL_VALUE.
-   public static final int LANDMARK_CELLS_BEGIN_VALUE = 1;
+   public static final int FOOD_CELL_VALUE            = 1;
+   public static final int MOX_CELL_VALUE             = 2;
+   public static final int LANDMARK_CELLS_BEGIN_VALUE = 3;
+
+   // Colors.
+   // See MoxWorx.EMPTY_CELL_COLOR.
+   public static final Color FOOD_CELL_COLOR = Color.GREEN;
+   public static final Color MOX_CELL_COLOR  = Color.BLUE;
 
    // Cells.
    public Dimension size;
@@ -22,7 +29,7 @@ public class PongCells
    public int[][]   restoreCells;
 
    // Constructors.
-   public PongCells(Dimension size)
+   public ForageCells(Dimension size)
    {
       // Create cells.
       this.size    = size;
@@ -38,7 +45,7 @@ public class PongCells
    }
 
 
-   public PongCells()
+   public ForageCells()
    {
       size = new Dimension();
    }
@@ -55,6 +62,54 @@ public class PongCells
    public int getHeight()
    {
       return(size.height);
+   }
+
+
+   // Count existing food.
+   public int countFood()
+   {
+      int x, y;
+      int w     = size.width;
+      int h     = size.height;
+      int count = 0;
+
+      for (x = 0; x < w; x++)
+      {
+         for (y = 0; y < h; y++)
+         {
+            if (cells[x][y] == FOOD_CELL_VALUE)
+            {
+               count++;
+            }
+         }
+      }
+      return(count);
+   }
+
+
+   // Distance to nearest food.
+   int foodDist(int x, int y)
+   {
+      int x2, y2, d, d2;
+      int w = size.width;
+      int h = size.height;
+
+      d = -1;
+      for (x2 = 0; x2 < w; x2++)
+      {
+         for (y2 = 0; y2 < h; y2++)
+         {
+            if (cells[x2][y2] == FOOD_CELL_VALUE)
+            {
+               d2 = cellDist(x, y, x2, y2);
+               if ((d == -1) || (d2 < d))
+               {
+                  d = d2;
+               }
+            }
+         }
+      }
+      return(d);
    }
 
 
@@ -97,7 +152,7 @@ public class PongCells
    {
       int n, x, y;
 
-      PrintWriter writer = new PrintWriter(output);
+      DataOutputStream writer = new DataOutputStream(new BufferedOutputStream(output));
 
       Utility.saveInt(writer, size.width);
       Utility.saveInt(writer, size.height);

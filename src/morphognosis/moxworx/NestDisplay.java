@@ -2,7 +2,7 @@
 
 // Nest display.
 
-package moxworx;
+package morphognosis.moxworx;
 
 import java.util.*;
 import java.awt.*;
